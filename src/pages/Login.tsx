@@ -4,15 +4,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const { signIn } = useAuth();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Authentication logic will be added later
-    console.log("Login attempt:", { email, password });
+    setLoading(true);
+    await signIn(email, password);
+    setLoading(false);
   };
 
   return (
@@ -57,8 +61,8 @@ const Login = () => {
             />
           </div>
 
-          <Button type="submit" className="w-full" variant="hero" size="lg">
-            Entrar
+          <Button type="submit" className="w-full" variant="hero" size="lg" disabled={loading}>
+            {loading ? "Entrando..." : "Entrar"}
           </Button>
         </form>
 

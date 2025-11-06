@@ -14,9 +14,11 @@ import {
 } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/hooks/useAuth";
 
 const Dashboard = () => {
   const location = useLocation();
+  const { signOut, user } = useAuth();
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -64,6 +66,7 @@ const Dashboard = () => {
           <Button
             variant="ghost"
             className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent/50"
+            onClick={signOut}
           >
             <LogOut className="w-5 h-5 mr-3" />
             Sair
