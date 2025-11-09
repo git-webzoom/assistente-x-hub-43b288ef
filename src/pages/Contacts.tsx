@@ -1,51 +1,63 @@
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Plus, Search, Mail, Phone, MoreVertical } from "lucide-react";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { ContactCard } from '@/components/ContactCard';
+import { ContactFormDialog } from '@/components/ContactFormDialog';
+import { useContacts, Contact } from '@/hooks/useContacts';
+import { Plus, Search, Users } from 'lucide-react';
 
 const Contacts = () => {
-  const contacts = [
-    {
-      id: "1",
-      name: "João Silva",
-      email: "joao@empresa.com",
-      phone: "(11) 98765-4321",
-      company: "Empresa ABC",
-      tags: ["cliente", "vip"],
-    },
-    {
-      id: "2",
-      name: "Maria Santos",
-      email: "maria@techcorp.com",
-      phone: "(21) 99876-5432",
-      company: "Tech Corp",
-      tags: ["lead", "interessado"],
-    },
-    {
-      id: "3",
-      name: "Pedro Costa",
-      email: "pedro@startup.com",
-      phone: "(31) 98765-1234",
-      company: "Startup XYZ",
-      tags: ["parceiro"],
-    },
-    {
-      id: "4",
-      name: "Ana Lima",
-      email: "ana@digital.com",
-      phone: "(41) 99123-4567",
-      company: "Digital Solutions",
-      tags: ["cliente", "recorrente"],
-    },
-    {
-      id: "5",
-      name: "Carlos Mendes",
-      email: "carlos@inovacao.com",
-      phone: "(51) 98765-9876",
-      company: "Inovação Ltd",
-      tags: ["prospect"],
-    },
-  ];
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
+
+  const { contacts, isLoading, createContact, updateContact, deleteContact } = useContacts(searchQuery);
+
+  const handleCreateContact = async (data: any) => {
+    await createContact.mutateAsync(data);
+  };
+
+  const handleUpdateContact = async (data: any) => {
+    if (selectedContact) {
+      await updateContact.mutateAsync({
+        id: selectedContact.id,
+        updates: data,
+      });
+    }
+  };
+
+  const handleEdit = (contact: Contact) => {
+    setSelectedContact(contact);
+    setIsFormOpen(true);
+  };
+
+  const handleDelete = (contact: Contact) => {
+    setContactToDelete(contact);
+  };
+
+  const confirmDelete = async () => {
+    if (contactToDelete) {
+      await deleteContact.mutateAsync(contactToDelete.id);
+      setContactToDelete(null);
+    }
+  };
+
+  const handleNewContact = () => {
+    setSelectedContact(null);
+    setIsFormOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -53,81 +65,108 @@ const Contacts = () => {
         <div>
           <h1 className="text-3xl font-bold mb-2">Contatos</h1>
           <p className="text-muted-foreground">
-            Gerencie todos os seus contatos e clientes
+            Gerencie seus contatos e relacionamentos
           </p>
         </div>
-        <Button variant="hero">
-          <Plus className="w-4 h-4 mr-2" />
+        <Button onClick={handleNewContact}>
+          <Plus className="mr-2 h-4 w-4" />
           Novo Contato
         </Button>
       </div>
 
-      {/* Search and Filters */}
-      <Card className="p-4">
-        <div className="flex items-center gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Buscar por nome, email ou empresa..."
-              className="pl-10"
-            />
-          </div>
-          <Button variant="outline">Filtros</Button>
-        </div>
-      </Card>
+      {/* Search Bar */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por nome, email ou empresa..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-10"
+        />
+      </div>
 
-      {/* Contacts List */}
-      <div className="grid gap-4">
-        {contacts.map((contact) => (
-          <Card key={contact.id} className="p-6 hover:shadow-lg transition-shadow">
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-4 flex-1">
-                <div className="w-12 h-12 rounded-full bg-gradient-hero flex items-center justify-center text-primary-foreground font-semibold">
-                  {contact.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()}
-                </div>
-
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold mb-1">{contact.name}</h3>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    {contact.company}
-                  </p>
-
-                  <div className="flex flex-col sm:flex-row gap-3 mb-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Mail className="w-4 h-4" />
-                      {contact.email}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Phone className="w-4 h-4" />
-                      {contact.phone}
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {contact.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-3 py-1 text-xs rounded-full bg-primary/10 text-primary"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
+      {/* Contacts Grid */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="p-4 border rounded-lg">
+              <div className="flex items-start gap-3 mb-3">
+                <Skeleton className="w-12 h-12 rounded-full" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-4 w-1/2" />
                 </div>
               </div>
-
-              <Button variant="ghost" size="icon">
-                <MoreVertical className="w-5 h-5" />
-              </Button>
+              <div className="space-y-2">
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
             </div>
-          </Card>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : contacts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <Users className="w-8 h-8 text-primary" />
+          </div>
+          <h3 className="text-xl font-semibold mb-2">
+            {searchQuery ? 'Nenhum contato encontrado' : 'Nenhum contato cadastrado'}
+          </h3>
+          <p className="text-muted-foreground mb-6 max-w-md">
+            {searchQuery
+              ? 'Tente ajustar sua busca ou limpar os filtros'
+              : 'Comece adicionando seu primeiro contato para gerenciar seus relacionamentos'}
+          </p>
+          {!searchQuery && (
+            <Button onClick={handleNewContact}>
+              <Plus className="mr-2 h-4 w-4" />
+              Adicionar Primeiro Contato
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {contacts.map((contact) => (
+            <ContactCard
+              key={contact.id}
+              contact={contact}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Form Dialog */}
+      <ContactFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        contact={selectedContact}
+        onSubmit={selectedContact ? handleUpdateContact : handleCreateContact}
+        isSubmitting={createContact.isPending || updateContact.isPending}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!contactToDelete} onOpenChange={() => setContactToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o contato "{contactToDelete?.name}"? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
