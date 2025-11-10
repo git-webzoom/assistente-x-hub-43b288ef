@@ -59,6 +59,13 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        "ax-indigo": "hsl(var(--ax-indigo))",
+        "ax-blue": "hsl(var(--ax-blue))",
+        "ax-violet": "hsl(var(--ax-violet))",
+        "ax-gray": "hsl(var(--ax-gray))",
+        "ax-success": "hsl(var(--ax-success))",
+        "ax-warning": "hsl(var(--ax-warning))",
+        "ax-error": "hsl(var(--ax-error))",
       },
       backgroundImage: {
         "gradient-hero": "var(--gradient-hero)",

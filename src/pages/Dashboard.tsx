@@ -15,6 +15,7 @@ import {
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const Dashboard = () => {
   const location = useLocation();
@@ -88,6 +89,7 @@ const Dashboard = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <Button variant="ghost" size="icon">
               <Bell className="w-5 h-5" />
             </Button>
