@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, MoreVertical, DollarSign } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Select,
   SelectContent,
@@ -123,10 +123,11 @@ const Pipelines = () => {
     })
   );
 
-  // Auto-select first pipeline
+useEffect(() => {
   if (pipelines && pipelines.length > 0 && !selectedPipelineId) {
     setSelectedPipelineId(pipelines[0].id);
   }
+}, [pipelines, selectedPipelineId]);
 
   const handleCreateStage = (name: string) => {
     if (!selectedPipelineId) return;
@@ -197,33 +198,35 @@ const Pipelines = () => {
             Gerencie suas oportunidades através do pipeline de vendas
           </p>
         </div>
-        <Button variant="default" onClick={() => setPipelineDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Pipeline
-        </Button>
+        <div className="flex items-center gap-3">
+          {pipelines && pipelines.length > 0 && (
+            <>
+              <Select value={selectedPipelineId} onValueChange={setSelectedPipelineId}>
+                <SelectTrigger className="w-[280px]">
+                  <SelectValue placeholder="Selecione uma pipeline" />
+                </SelectTrigger>
+                <SelectContent>
+                  {pipelines.map((pipeline) => (
+                    <SelectItem key={pipeline.id} value={pipeline.id}>
+                      {pipeline.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" onClick={() => setStageDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Nova Etapa
+              </Button>
+            </>
+          )}
+          <Button variant="default" onClick={() => setPipelineDialogOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Pipeline
+          </Button>
+        </div>
       </div>
-
       {pipelines && pipelines.length > 0 ? (
         <>
-          <div className="flex items-center gap-4">
-            <Select value={selectedPipelineId} onValueChange={setSelectedPipelineId}>
-              <SelectTrigger className="w-[280px]">
-                <SelectValue placeholder="Selecione uma pipeline" />
-              </SelectTrigger>
-              <SelectContent>
-                {pipelines.map((pipeline) => (
-                  <SelectItem key={pipeline.id} value={pipeline.id}>
-                    {pipeline.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" onClick={() => setStageDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nova Etapa
-            </Button>
-          </div>
-
           <DndContext
             sensors={sensors}
             onDragStart={handleDragStart}

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface Pipeline {
   id: string;
@@ -13,25 +14,52 @@ export interface Pipeline {
 export const usePipelines = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: pipelines, isLoading } = useQuery({
-    queryKey: ["pipelines"],
+    queryKey: ["pipelines", user?.id],
     queryFn: async () => {
+      if (!user?.id) return [];
+
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (userError) throw userError;
+      const tenantId = userData?.tenant_id;
+      if (!tenantId) return [];
+
       const { data, error } = await supabase
         .from("pipelines")
         .select("*")
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
       return data as Pipeline[];
     },
+    enabled: !!user?.id,
   });
 
   const createPipeline = useMutation({
     mutationFn: async (name: string) => {
+      if (!user?.id) throw new Error("User not authenticated");
+
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (userError) throw userError;
+      const tenantId = userData?.tenant_id;
+      if (!tenantId) throw new Error("Tenant not found");
+
       const { data, error } = await supabase
         .from("pipelines")
-        .insert({ name })
+        .insert({ name, tenant_id: tenantId })
         .select()
         .single();
 

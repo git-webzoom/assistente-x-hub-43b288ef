@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface Card {
   id: string;
@@ -22,6 +23,7 @@ export interface Card {
 export const useCards = (pipelineId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: cards, isLoading } = useQuery({
     queryKey: ["cards", pipelineId],
@@ -70,9 +72,22 @@ export const useCards = (pipelineId?: string) => {
       description?: string;
       tags?: string[];
     }) => {
+      if (!user?.id) throw new Error("User not authenticated");
+
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("tenant_id")
+        .eq("id", user.id)
+        .single();
+
+      if (userError) throw userError;
+      const tenantId = userData?.tenant_id;
+      if (!tenantId) throw new Error("Tenant not found");
+
       const { data, error } = await supabase
         .from("cards")
         .insert({
+          tenant_id: tenantId,
           pipeline_id: pipelineId,
           stage_id: stageId,
           title,
@@ -80,6 +95,7 @@ export const useCards = (pipelineId?: string) => {
           position,
           description: description || null,
           tags: tags || null,
+          created_by: user.id,
         })
         .select()
         .single();
