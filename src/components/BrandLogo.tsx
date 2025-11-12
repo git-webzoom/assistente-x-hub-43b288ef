@@ -7,19 +7,25 @@ interface BrandLogoProps {
 }
 
 const BrandLogo: React.FC<BrandLogoProps> = ({ className, alt = "AssistenteX" }) => {
+  const base = import.meta.env.BASE_URL || "/";
+
   return (
     <div className={cn("relative", className)}>
       {/* Light mode logo */}
       <img
-        src="/logo-02.png"
+        src={`${base}logo-02.png`}
         alt={alt}
         className="block dark:hidden w-full h-full object-contain"
+        loading="eager"
+        decoding="async"
       />
       {/* Dark mode logo */}
       <img
-        src="/logo-01.png"
+        src={`${base}logo-01.png`}
         alt={alt}
         className="hidden dark:block w-full h-full object-contain"
+        loading="eager"
+        decoding="async"
       />
     </div>
   );
