@@ -37,7 +37,7 @@ const Dashboard = () => {
       {/* Sidebar */}
       <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="w-full flex justify-center">
             <BrandLogo className="w-[160px]" />
           </Link>
         </div>
