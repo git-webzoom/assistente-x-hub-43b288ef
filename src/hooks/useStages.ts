@@ -107,6 +107,7 @@ export const useStages = (pipelineId?: string) => {
     isLoading,
     createStage: createStage.mutate,
     updateStage: updateStage.mutate,
+    updateStageOrder: updateStageOrder.mutate,
     deleteStage: deleteStage.mutate,
   };
 };

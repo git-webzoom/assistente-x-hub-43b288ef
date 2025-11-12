@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, MoreVertical, DollarSign } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Plus, MoreVertical, DollarSign, Pencil, GripVertical } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Select,
@@ -31,22 +32,24 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { SortableContext, useSortable } from "@dnd-kit/sortable";
+import { SortableContext, useSortable, arrayMove } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
 interface DraggableCardProps {
   card: {
     id: string;
+    stage_id: string;
     title: string;
     value: number;
     tags: string[] | null;
+    position?: number;
   };
   onDelete: (id: string) => void;
 }
 
 const DraggableCard = ({ card, onDelete }: DraggableCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: card.id });
+    useSortable({ id: card.id, data: { type: "card", stageId: card.stage_id } });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -101,6 +104,121 @@ const DraggableCard = ({ card, onDelete }: DraggableCardProps) => {
   );
 };
 
+const StageColumn = ({
+  stage,
+  cards,
+  onAddCard,
+  onDeleteStage,
+  onRenameStage,
+  getStageTotal,
+}: {
+  stage: { id: string; name: string };
+  cards: DraggableCardProps["card"][];
+  onAddCard: () => void;
+  onDeleteStage: () => void;
+  onRenameStage: (name: string) => void;
+  getStageTotal: (stageId: string) => number;
+}) => {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
+    id: stage.id,
+    data: { type: "stage" },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  } as React.CSSProperties;
+
+  const [editing, setEditing] = useState(false);
+  const [name, setName] = useState(stage.name);
+
+  const commit = () => {
+    const newName = name.trim();
+    if (newName && newName !== stage.name) onRenameStage(newName);
+    setEditing(false);
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex-shrink-0 w-80">
+      <Card className="bg-muted/50">
+        <div className="p-4 border-b">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              <button
+                {...listeners}
+                {...attributes}
+                className="cursor-grab text-muted-foreground"
+                aria-label="Reordenar etapa"
+              >
+                <GripVertical className="w-4 h-4" />
+              </button>
+              {editing ? (
+                <Input
+                  autoFocus
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  onBlur={commit}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commit();
+                    if (e.key === "Escape") {
+                      setName(stage.name);
+                      setEditing(false);
+                    }
+                  }}
+                  className="h-7 w-40"
+                />
+              ) : (
+                <h3 className="font-semibold">{stage.name}</h3>
+              )}
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditing((v) => !v)}>
+                <Pencil className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">{cards.length}</span>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6">
+                    <MoreVertical className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onClick={onDeleteStage} className="text-ax-error">
+                    Excluir etapa
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">
+            Total: R$ {getStageTotal(stage.id).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+          </div>
+        </div>
+
+        <SortableContext items={cards.map((c) => c.id)}>
+          <div
+            className="p-4 space-y-3 min-h-[200px] max-h-[calc(100dvh-260px)] overflow-y-auto scroll-smooth scrollable-stage"
+            data-stage-id={stage.id}
+          >
+            {cards.map((card) => (
+              <DraggableCard key={card.id} card={card} onDelete={() => onDeleteStage} />
+            ))}
+
+            <Button
+              variant="ghost"
+              className="w-full justify-start text-muted-foreground"
+              onClick={onAddCard}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Adicionar card
+            </Button>
+          </div>
+        </SortableContext>
+      </Card>
+    </div>
+  );
+};
+
 const Pipelines = () => {
   const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
   const [pipelineDialogOpen, setPipelineDialogOpen] = useState(false);
@@ -110,7 +228,7 @@ const Pipelines = () => {
   const [activeCard, setActiveCard] = useState<any>(null);
 
   const { pipelines, isLoading: pipelinesLoading, createPipeline } = usePipelines();
-  const { stages, isLoading: stagesLoading, createStage, deleteStage } =
+  const { stages, isLoading: stagesLoading, createStage, deleteStage, updateStage, updateStageOrder } =
     useStages(selectedPipelineId);
   const { cards, isLoading: cardsLoading, createCard, updateCard, deleteCard } =
     useCards(selectedPipelineId);
@@ -155,19 +273,72 @@ useEffect(() => {
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveCard(null);
-
     if (!over) return;
 
-    const activeId = active.id as string;
-    const overId = over.id as string;
+    const activeType = active.data.current?.type as "card" | "stage" | undefined;
+    const overType = over.data.current?.type as "card" | "stage" | undefined;
 
-    const activeCard = cards?.find((c) => c.id === activeId);
-    if (!activeCard) return;
+    // Reordenar etapas
+    if (activeType === "stage" && overType === "stage" && active.id !== over.id) {
+      const oldIndex = stages?.findIndex((s) => s.id === active.id) ?? -1;
+      const newIndex = stages?.findIndex((s) => s.id === over.id) ?? -1;
+      if (oldIndex < 0 || newIndex < 0 || !stages) return;
+      const newStages = arrayMove(stages, oldIndex, newIndex);
+      newStages.forEach((s, index) => updateStageOrder({ id: s.id, order_index: index }));
+      return;
+    }
 
-    // Check if dropped over a stage
-    const overStage = stages?.find((s) => s.id === overId);
-    if (overStage && activeCard.stage_id !== overStage.id) {
-      updateCard({ id: activeId, stageId: overStage.id });
+    // Reordenar/mover cards
+    if (activeType === "card") {
+      const activeId = String(active.id);
+      const fromStageId = (active.data.current as any)?.stageId as string;
+
+      let toStageId = fromStageId;
+      let targetIndex = 0;
+
+      if (overType === "card") {
+        const overCardId = String(over.id);
+        const overCard = cards?.find((c) => c.id === overCardId);
+        if (!overCard) return;
+        toStageId = overCard.stage_id;
+        const toCards = (cards || [])
+          .filter((c) => c.stage_id === toStageId && c.id !== activeId)
+          .sort((a, b) => a.position - b.position);
+        targetIndex = toCards.findIndex((c) => c.id === overCardId);
+      } else if (overType === "stage") {
+        toStageId = String(over.id);
+        targetIndex = (cards || []).filter((c) => c.stage_id === toStageId).length;
+      } else {
+        return;
+      }
+
+      const activeCard = cards?.find((c) => c.id === activeId);
+      if (!activeCard) return;
+
+      if (fromStageId === toStageId) {
+        const list = (cards || [])
+          .filter((c) => c.stage_id === fromStageId)
+          .sort((a, b) => a.position - b.position);
+        const oldIndex = list.findIndex((c) => c.id === activeId);
+        const newIndex = targetIndex;
+        const newList = arrayMove(list, oldIndex, newIndex);
+        newList.forEach((c, idx) => updateCard({ id: c.id, position: idx }));
+      } else {
+        const fromList = (cards || [])
+          .filter((c) => c.stage_id === fromStageId && c.id !== activeId)
+          .sort((a, b) => a.position - b.position);
+        const toList = (cards || [])
+          .filter((c) => c.stage_id === toStageId && c.id !== activeId)
+          .sort((a, b) => a.position - b.position);
+        const inserted = [...toList];
+        inserted.splice(targetIndex, 0, activeCard);
+        // Atualiza destino (inclui stageId para o card movido)
+        inserted.forEach((c, idx) =>
+          updateCard({ id: c.id, position: idx, ...(c.id === activeId ? { stageId: toStageId } : {}) })
+        );
+        // Reindexa origem
+        fromList.forEach((c, idx) => updateCard({ id: c.id, position: idx }));
+      }
     }
   };
 
