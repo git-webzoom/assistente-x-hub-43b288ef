@@ -26,7 +26,6 @@ const Login = () => {
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
             <BrandLogo className="w-10 h-10" />
-            <span className="text-2xl font-bold">AssistenteX</span>
           </Link>
           <h1 className="text-3xl font-bold mb-2">Bem-vindo de volta</h1>
           <p className="text-muted-foreground">Entre com sua conta para continuar</p>
