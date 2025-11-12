@@ -20,7 +20,7 @@ import BrandLogo from "@/components/BrandLogo";
 
 const Dashboard = () => {
   const location = useLocation();
-  const { signOut, user } = useAuth();
+  const { signOut } = useAuth();
 
   const menuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
@@ -38,8 +38,7 @@ const Dashboard = () => {
       <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
         <div className="p-6 border-b border-sidebar-border">
           <Link to="/" className="flex items-center gap-2">
-            <BrandLogo className="w-8 h-8" />
-            <span className="text-xl font-bold text-sidebar-foreground">AssistenteX</span>
+            <BrandLogo className="w-[200px]" />
           </Link>
         </div>
 

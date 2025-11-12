@@ -53,7 +53,7 @@ const Signup = () => {
       <Card className="w-full max-w-md p-8 shadow-xl">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
-            <BrandLogo className="w-10 h-10" />
+            <BrandLogo className="w-[200px]" />
           </Link>
           <h1 className="text-3xl font-bold mb-2">Criar sua conta</h1>
           <p className="text-muted-foreground">Comece grátis, sem necessidade de cartão</p>

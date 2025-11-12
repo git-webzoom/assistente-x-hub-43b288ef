@@ -12,7 +12,7 @@ const Index = () => {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <BrandLogo className="w-8 h-8" />
+            <BrandLogo className="w-[200px]" />
           </div>
           <nav className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
@@ -181,7 +181,7 @@ const Index = () => {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <BrandLogo className="w-8 h-8" />
+                <BrandLogo className="w-[200px]" />
               </div>
               <p className="text-sm text-muted-foreground">
                 Gestão de atendimento inteligente para empresas modernas
