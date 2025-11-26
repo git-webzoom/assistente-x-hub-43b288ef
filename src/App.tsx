@@ -17,6 +17,7 @@ import Products from "./pages/Products";
 import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
 import Settings from "./pages/Settings";
+import ApiDocumentation from "./pages/ApiDocumentation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
                 <Route path="products" element={<Products />} />
                 <Route path="calendar" element={<Calendar />} />
                 <Route path="tasks" element={<Tasks />} />
+                <Route path="api-docs" element={<ApiDocumentation />} />
                 <Route path="settings" element={<Settings />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
