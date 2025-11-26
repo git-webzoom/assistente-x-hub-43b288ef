@@ -41,9 +41,20 @@ const AVAILABLE_EVENTS = [
   { id: "card.created", label: "Card criado" },
   { id: "card.updated", label: "Card atualizado" },
   { id: "card.deleted", label: "Card excluído" },
+  { id: "card.moved", label: "Card movido" },
   { id: "contact.created", label: "Contato criado" },
   { id: "contact.updated", label: "Contato atualizado" },
   { id: "contact.deleted", label: "Contato excluído" },
+  { id: "product.created", label: "Produto criado" },
+  { id: "product.updated", label: "Produto atualizado" },
+  { id: "product.deleted", label: "Produto excluído" },
+  { id: "appointment.created", label: "Agenda criada" },
+  { id: "appointment.updated", label: "Agenda atualizada" },
+  { id: "appointment.deleted", label: "Agenda excluída" },
+  { id: "task.created", label: "Tarefa criada" },
+  { id: "task.updated", label: "Tarefa atualizada" },
+  { id: "task.deleted", label: "Tarefa excluída" },
+  { id: "task.completed", label: "Tarefa completada" },
 ] as const;
 
 export default function WebhookSettings() {
