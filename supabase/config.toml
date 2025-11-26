@@ -2,3 +2,6 @@ project_id = "onhnxxweldxjzhoaiwgq"
 
 [functions.dispatch-webhook]
 verify_jwt = false
+
+[functions.dispatch-webhook-v2]
+verify_jwt = false

@@ -22,7 +22,7 @@ export async function dispatchWebhookFromClient(payload: WebhookClientPayload) {
 
     console.log("Dispatching webhook from client:", body);
 
-    const { data, error } = await supabase.functions.invoke("dispatch-webhook", {
+    const { data, error } = await supabase.functions.invoke("dispatch-webhook-v2", {
       body,
     });
 
