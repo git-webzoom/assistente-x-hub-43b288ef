@@ -99,7 +99,7 @@ export default function Tasks() {
 
     const data = {
       ...formData,
-      contact_id: formData.contact_id || null,
+      contact_id: formData.contact_id && formData.contact_id !== 'none' ? formData.contact_id : null,
       description: formData.description || null,
       due_date: formData.due_date || null,
     };
@@ -369,7 +369,7 @@ export default function Tasks() {
                   <SelectValue placeholder="Selecione um contato" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {contacts?.map((contact) => (
                     <SelectItem key={contact.id} value={contact.id}>
                       {contact.name}
