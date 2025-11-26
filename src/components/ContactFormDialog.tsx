@@ -116,8 +116,8 @@ export const ContactFormDialog = ({
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 pr-4">
-          <form id="contact-form" onSubmit={handleSubmit} className="space-y-4">
+        <ScrollArea className="max-h-[60vh] pr-4">
+          <form id="contact-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome *</Label>
               <Input

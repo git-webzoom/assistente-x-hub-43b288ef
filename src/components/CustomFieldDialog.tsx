@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { CustomField, CustomFieldEntity, CustomFieldType } from '@/hooks/useCustomFields';
 import { X } from 'lucide-react';
 import { z } from 'zod';
@@ -118,13 +119,15 @@ export const CustomFieldDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {customField ? 'Editar Campo Personalizado' : 'Novo Campo Personalizado'}
           </DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        
+        <ScrollArea className="max-h-[60vh] pr-4">
+          <form id="custom-field-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
           <div className="space-y-2">
             <Label htmlFor="field_label">Nome do Campo *</Label>
             <Input
@@ -224,14 +227,15 @@ export const CustomFieldDialog = ({
               Campo obrigatório
             </Label>
           </div>
+          </form>
+        </ScrollArea>
 
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="submit">Salvar</Button>
-          </DialogFooter>
-        </form>
+        <DialogFooter className="flex-shrink-0">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button type="submit" form="custom-field-form">Salvar</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

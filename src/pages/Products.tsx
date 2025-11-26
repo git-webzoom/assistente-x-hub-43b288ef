@@ -282,8 +282,8 @@ export default function Products() {
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
-          <form id="product-form" onSubmit={handleSubmit} className="space-y-4">
+          <ScrollArea className="max-h-[60vh] pr-4">
+            <form id="product-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="name">Nome do Produto *</Label>
