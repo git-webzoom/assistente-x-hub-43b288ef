@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { dispatchWebhookFromClient } from '@/lib/webhookClient';
 
 export interface Appointment {
   id: string;
@@ -91,6 +92,16 @@ export const useAppointments = () => {
         .single();
 
       if (error) throw error;
+
+      // Disparar webhook appointment.created
+      await dispatchWebhookFromClient({
+        event: 'appointment.created',
+        entity: 'appointment',
+        data,
+        tenant_id: userData.tenant_id,
+        user_id: user.id,
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -112,8 +123,20 @@ export const useAppointments = () => {
 
   const updateAppointment = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Appointment> & { id: string }) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
       const { contact, ...updateData } = updates;
-      const { data, error } = await supabase
+
+      // Buscar appointment antes de atualizar
+      const { data: before, error: fetchError } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !before) throw fetchError || new Error('Appointment not found');
+
+      const { data: after, error } = await supabase
         .from('appointments')
         .update(updateData)
         .eq('id', id)
@@ -121,7 +144,23 @@ export const useAppointments = () => {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Disparar webhook appointment.updated apenas se houve mudanças significativas
+      const hasSignificantChange = Object.keys(updateData).some(
+        key => updateData[key as keyof typeof updateData] !== before[key as keyof typeof before]
+      );
+
+      if (hasSignificantChange) {
+        await dispatchWebhookFromClient({
+          event: 'appointment.updated',
+          entity: 'appointment',
+          data: { before, after },
+          tenant_id: before.tenant_id,
+          user_id: user.id,
+        });
+      }
+
+      return after;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
@@ -142,9 +181,29 @@ export const useAppointments = () => {
 
   const deleteAppointment = useMutation({
     mutationFn: async (id: string) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
+      // Buscar appointment antes de deletar
+      const { data: appointment, error: fetchError } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !appointment) throw fetchError || new Error('Appointment not found');
+
       const { error } = await supabase.from('appointments').delete().eq('id', id);
 
       if (error) throw error;
+
+      // Disparar webhook appointment.deleted
+      await dispatchWebhookFromClient({
+        event: 'appointment.deleted',
+        entity: 'appointment',
+        data: appointment,
+        tenant_id: appointment.tenant_id,
+        user_id: user.id,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });

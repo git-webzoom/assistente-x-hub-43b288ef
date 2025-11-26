@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { dispatchWebhookFromClient } from '@/lib/webhookClient';
 
 export interface Product {
   id: string;
@@ -55,6 +56,16 @@ export const useProducts = () => {
         .single();
 
       if (error) throw error;
+
+      // Disparar webhook product.created
+      await dispatchWebhookFromClient({
+        event: 'product.created',
+        entity: 'product',
+        data,
+        tenant_id: userData.tenant_id,
+        user_id: user.id,
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -75,7 +86,18 @@ export const useProducts = () => {
 
   const updateProduct = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Product> & { id: string }) => {
-      const { data, error } = await supabase
+      if (!user?.id) throw new Error('User not authenticated');
+
+      // Buscar produto antes de atualizar
+      const { data: before, error: fetchError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !before) throw fetchError || new Error('Product not found');
+
+      const { data: after, error } = await supabase
         .from('products')
         .update(updates)
         .eq('id', id)
@@ -83,7 +105,23 @@ export const useProducts = () => {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Disparar webhook product.updated apenas se houve mudanças significativas
+      const hasSignificantChange = Object.keys(updates).some(
+        key => updates[key as keyof Product] !== before[key as keyof Product]
+      );
+
+      if (hasSignificantChange) {
+        await dispatchWebhookFromClient({
+          event: 'product.updated',
+          entity: 'product',
+          data: { before, after },
+          tenant_id: before.tenant_id,
+          user_id: user.id,
+        });
+      }
+
+      return after;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -103,9 +141,29 @@ export const useProducts = () => {
 
   const deleteProduct = useMutation({
     mutationFn: async (id: string) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
+      // Buscar produto antes de deletar
+      const { data: product, error: fetchError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !product) throw fetchError || new Error('Product not found');
+
       const { error } = await supabase.from('products').delete().eq('id', id);
 
       if (error) throw error;
+
+      // Disparar webhook product.deleted
+      await dispatchWebhookFromClient({
+        event: 'product.deleted',
+        entity: 'product',
+        data: product,
+        tenant_id: product.tenant_id,
+        user_id: user.id,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
