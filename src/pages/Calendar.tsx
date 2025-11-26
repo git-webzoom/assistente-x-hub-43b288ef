@@ -43,6 +43,7 @@ import { useContacts } from '@/hooks/useContacts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CustomFieldsSection } from '@/components/CustomFieldsSection';
+import { ContactSelect } from '@/components/ContactSelect';
 
 export default function Calendar() {
   const { appointments, isLoading, createAppointment, updateAppointment, deleteAppointment } =
@@ -524,22 +525,12 @@ export default function Calendar() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="contact_id">Contato</Label>
-                  <Select
-                    value={formData.contact_id}
-                    onValueChange={(value) => setFormData({ ...formData, contact_id: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um contato" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {contacts?.map((contact) => (
-                        <SelectItem key={contact.id} value={contact.id}>
-                          {contact.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ContactSelect
+                    value={formData.contact_id || undefined}
+                    onChange={(value) =>
+                      setFormData({ ...formData, contact_id: value || '' })
+                    }
+                  />
                 </div>
 
                 <div className="space-y-2">
