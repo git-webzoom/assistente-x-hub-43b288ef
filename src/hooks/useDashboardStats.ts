@@ -22,7 +22,7 @@ export const useDashboardStats = () => {
       const tenantId = userData.tenant_id;
 
       // Fetch all stats in parallel
-      const [contactsCount, tasksCount, appointmentsToday, pipelineData] = await Promise.all([
+      const [contactsCount, tasksCount, pipelineData] = await Promise.all([
         // Count active contacts
         supabase
           .from('contacts')
@@ -36,21 +36,36 @@ export const useDashboardStats = () => {
           .eq('tenant_id', tenantId)
           .eq('status', 'pending'),
 
-        // Get today's appointments
-        supabase
-          .from('appointments')
-          .select('*, contact:contacts(name)')
-          .eq('tenant_id', tenantId)
-          .gte('start_time', new Date().toISOString().split('T')[0])
-          .lt('start_time', new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0])
-          .order('start_time', { ascending: true }),
-
         // Get pipeline data for conversion rate
         supabase
           .from('cards')
           .select('stage_id, stages!inner(name)')
           .eq('tenant_id', tenantId)
       ]);
+
+      // Get today's appointments separately with fallback
+      const today = new Date().toISOString().split('T')[0];
+      const tomorrow = new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0];
+      
+      // Try with join first
+      let appointmentsToday = await supabase
+        .from('appointments')
+        .select('*, contact:contacts(name)')
+        .eq('tenant_id', tenantId)
+        .gte('start_time', today)
+        .lt('start_time', tomorrow)
+        .order('start_time', { ascending: true });
+
+      // If join fails, try without join
+      if (appointmentsToday.error) {
+        appointmentsToday = await supabase
+          .from('appointments')
+          .select('*')
+          .eq('tenant_id', tenantId)
+          .gte('start_time', today)
+          .lt('start_time', tomorrow)
+          .order('start_time', { ascending: true });
+      }
 
       // Calculate conversion rate (cards in final stage / total cards)
       const totalCards = pipelineData.data?.length || 0;
