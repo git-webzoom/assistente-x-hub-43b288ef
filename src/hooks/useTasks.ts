@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { dispatchWebhookFromClient } from '@/lib/webhookClient';
 
 export interface Task {
   id: string;
@@ -91,6 +92,16 @@ export const useTasks = () => {
         .single();
 
       if (error) throw error;
+
+      // Disparar webhook task.created
+      await dispatchWebhookFromClient({
+        event: 'task.created',
+        entity: 'task',
+        data,
+        tenant_id: userData.tenant_id,
+        user_id: user.id,
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -111,8 +122,19 @@ export const useTasks = () => {
 
   const updateTask = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Task> & { id: string }) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
       const { contact, ...updateData } = updates;
       
+      // Buscar task atual antes de atualizar
+      const { data: before, error: fetchError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !before) throw fetchError || new Error('Task not found');
+
       // Se marcar como completed, adiciona timestamp
       if (updateData.status === 'completed' && !updateData.completed_at) {
         updateData.completed_at = new Date().toISOString();
@@ -122,7 +144,7 @@ export const useTasks = () => {
         updateData.completed_at = null;
       }
 
-      const { data, error } = await supabase
+      const { data: after, error } = await supabase
         .from('tasks')
         .update(updateData)
         .eq('id', id)
@@ -130,7 +152,39 @@ export const useTasks = () => {
         .single();
 
       if (error) throw error;
-      return data;
+
+      const tenantId = before.tenant_id;
+
+      // Disparar webhook apenas se status mudou para completed
+      if (updateData.status === 'completed' && before.status !== 'completed') {
+        await dispatchWebhookFromClient({
+          event: 'task.completed',
+          entity: 'task',
+          data: after,
+          tenant_id: tenantId,
+          user_id: user.id,
+        });
+      }
+
+      // Disparar webhook task.updated para outras mudanças (exceto completed_at automático)
+      const hasSignificantChange = 
+        (updateData.title !== undefined && updateData.title !== before.title) ||
+        (updateData.description !== undefined && updateData.description !== before.description) ||
+        (updateData.due_date !== undefined && updateData.due_date !== before.due_date) ||
+        (updateData.priority !== undefined && updateData.priority !== before.priority) ||
+        (updateData.status !== undefined && updateData.status !== before.status);
+
+      if (hasSignificantChange) {
+        await dispatchWebhookFromClient({
+          event: 'task.updated',
+          entity: 'task',
+          data: { before, after },
+          tenant_id: tenantId,
+          user_id: user.id,
+        });
+      }
+
+      return after;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -150,9 +204,29 @@ export const useTasks = () => {
 
   const deleteTask = useMutation({
     mutationFn: async (id: string) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
+      // Buscar task antes de deletar
+      const { data: task, error: fetchError } = await supabase
+        .from('tasks')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !task) throw fetchError || new Error('Task not found');
+
       const { error } = await supabase.from('tasks').delete().eq('id', id);
 
       if (error) throw error;
+
+      // Disparar webhook task.deleted
+      await dispatchWebhookFromClient({
+        event: 'task.deleted',
+        entity: 'task',
+        data: task,
+        tenant_id: task.tenant_id,
+        user_id: user.id,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
