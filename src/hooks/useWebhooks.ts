@@ -54,9 +54,18 @@ export const useWebhooks = () => {
 
       if (!userData?.tenant_id) throw new Error('Tenant not found');
 
+      // Gerar secret único para o webhook
+      const secret = crypto.randomUUID();
+
       const { data, error } = await supabase
         .from('webhooks')
-        .insert([{ url, events, is_active: true, tenant_id: userData.tenant_id }])
+        .insert([{ 
+          url, 
+          events, 
+          is_active: true, 
+          tenant_id: userData.tenant_id,
+          secret 
+        }])
         .select()
         .single();
 
