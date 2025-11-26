@@ -124,21 +124,50 @@ export const useCards = (pipelineId?: string) => {
       id,
       stageId,
       position,
+      title,
+      value,
+      description,
+      tags,
     }: {
       id: string;
       stageId?: string;
       position?: number;
+      title?: string;
+      value?: number;
+      description?: string;
+      tags?: string[];
     }) => {
       const updates: any = {};
       if (stageId) updates.stage_id = stageId;
       if (position !== undefined) updates.position = position;
+      if (title) updates.title = title;
+      if (value !== undefined) updates.value = value;
+      if (description !== undefined) updates.description = description;
+      if (tags !== undefined) updates.tags = tags;
 
       const { error } = await supabase.from("cards").update(updates).eq("id", id);
 
       if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["cards"] });
+      // Show toast only when updating card details (not position/stage)
+      if (variables.title || variables.value !== undefined) {
+        toast({
+          title: "Card atualizado",
+          description: "Card atualizado com sucesso",
+        });
+      }
+    },
+    onError: (_, variables) => {
+      // Show error toast only when updating card details
+      if (variables.title || variables.value !== undefined) {
+        toast({
+          title: "Erro",
+          description: "Não foi possível atualizar o card",
+          variant: "destructive",
+        });
+      }
     },
   });
 
