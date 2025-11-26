@@ -558,13 +558,28 @@ export default function Calendar() {
               </div>
             </div>
 
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                Cancelar
-              </Button>
-              <Button type="submit">
-                {editingAppointment ? 'Salvar Alterações' : 'Criar Compromisso'}
-              </Button>
+            <DialogFooter className="flex justify-between">
+              {editingAppointment && (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  onClick={() => {
+                    handleDelete(editingAppointment.id);
+                    handleCloseDialog();
+                  }}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Excluir
+                </Button>
+              )}
+              <div className="flex gap-2 ml-auto">
+                <Button type="button" variant="outline" onClick={handleCloseDialog}>
+                  Cancelar
+                </Button>
+                <Button type="submit">
+                  {editingAppointment ? 'Salvar Alterações' : 'Criar Compromisso'}
+                </Button>
+              </div>
             </DialogFooter>
           </form>
         </DialogContent>
