@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Plus, Trash2, Copy, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Copy, Eye, EyeOff, BookOpen } from 'lucide-react';
 import { useApiKeys, type ApiKey } from '@/hooks/useApiKeys';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -118,13 +119,21 @@ export default function ApiKeySettings() {
           </p>
         </div>
 
-        <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setIsDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Nova API Key
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" asChild>
+            <Link to="/dashboard/api-docs">
+              <BookOpen className="w-4 h-4 mr-2" />
+              Ver Documentação
+            </Link>
+          </Button>
+          
+          <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
+            <DialogTrigger asChild>
+              <Button onClick={() => setIsDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Nova API Key
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Nova API Key</DialogTitle>
@@ -199,6 +208,7 @@ export default function ApiKeySettings() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
