@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Appointment {
@@ -22,6 +23,7 @@ export interface Appointment {
 }
 
 export const useAppointments = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -72,9 +74,19 @@ export const useAppointments = () => {
 
   const createAppointment = useMutation({
     mutationFn: async (appointment: Omit<Appointment, 'id' | 'tenant_id' | 'created_at' | 'updated_at' | 'contact'>) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!userData?.tenant_id) throw new Error('Tenant not found');
+
       const { data, error } = await supabase
         .from('appointments')
-        .insert([appointment])
+        .insert([{ ...appointment, tenant_id: userData.tenant_id }])
         .select()
         .single();
 
