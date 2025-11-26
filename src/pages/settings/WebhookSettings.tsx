@@ -140,7 +140,7 @@ export default function WebhookSettings() {
     try {
       await updateWebhook({
         id: webhook.id,
-        updates: { active: !webhook.active },
+        updates: { is_active: !webhook.is_active },
       });
     } catch (error) {
       console.error('Error toggling webhook:', error);
@@ -320,11 +320,11 @@ export default function WebhookSettings() {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Switch
-                        checked={webhook.active}
+                        checked={webhook.is_active}
                         onCheckedChange={() => handleToggleActive(webhook)}
                       />
                       <span className="text-sm">
-                        {webhook.active ? "Ativo" : "Inativo"}
+                        {webhook.is_active ? "Ativo" : "Inativo"}
                       </span>
                     </div>
                   </TableCell>

@@ -40,7 +40,7 @@ serve(async (req) => {
       .from('webhooks')
       .select('*')
       .eq('tenant_id', payload.tenant_id)
-      .eq('active', true);
+      .eq('is_active', true);
 
     if (webhooksError) {
       console.error('Error fetching webhooks:', webhooksError);
