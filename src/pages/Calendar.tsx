@@ -112,7 +112,7 @@ export default function Calendar() {
 
     const data = {
       ...formData,
-      contact_id: formData.contact_id || null,
+      contact_id: formData.contact_id && formData.contact_id !== 'none' ? formData.contact_id : null,
       description: formData.description || null,
       location: formData.location || null,
     };
@@ -530,7 +530,7 @@ export default function Calendar() {
                     <SelectValue placeholder="Selecione um contato" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {contacts?.map((contact) => (
                       <SelectItem key={contact.id} value={contact.id}>
                         {contact.name}
