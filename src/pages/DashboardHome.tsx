@@ -138,10 +138,10 @@ const DashboardHome = () => {
                   <div className="flex-1">
                     <p className="font-medium">{appointment.title}</p>
                     <p className="text-sm text-muted-foreground">
-                      {appointment.contacts?.name || 'Sem contato'}
+                      {appointment.contact?.name || 'Sem contato'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(appointment.date).toLocaleTimeString('pt-BR', {
+                      {new Date(appointment.start_time).toLocaleTimeString('pt-BR', {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}

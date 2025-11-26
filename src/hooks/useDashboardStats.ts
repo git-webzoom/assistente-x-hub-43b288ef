@@ -39,11 +39,11 @@ export const useDashboardStats = () => {
         // Get today's appointments
         supabase
           .from('appointments')
-          .select('*, contacts(name)')
+          .select('*, contact:contacts(name)')
           .eq('tenant_id', tenantId)
-          .gte('date', new Date().toISOString().split('T')[0])
-          .lte('date', new Date().toISOString().split('T')[0])
-          .order('date', { ascending: true }),
+          .gte('start_time', new Date().toISOString().split('T')[0])
+          .lt('start_time', new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0])
+          .order('start_time', { ascending: true }),
 
         // Get pipeline data for conversion rate
         supabase
