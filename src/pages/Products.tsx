@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useProducts, type Product } from '@/hooks/useProducts';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CustomFieldsSection } from '@/components/CustomFieldsSection';
 
 export default function Products() {
   const { products, isLoading, createProduct, updateProduct, deleteProduct } = useProducts();
@@ -370,6 +371,11 @@ export default function Products() {
                 </div>
               </div>
             </div>
+
+            <CustomFieldsSection
+              entityType="product"
+              entityId={editingProduct?.id}
+            />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
