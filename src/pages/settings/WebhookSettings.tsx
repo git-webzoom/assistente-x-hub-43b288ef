@@ -97,7 +97,7 @@ export default function WebhookSettings() {
     setSelectedEvents([]);
   };
 
-  const handleSaveWebhook = () => {
+  const handleSaveWebhook = async () => {
     const trimmedUrl = url.trim();
 
     if (!trimmedUrl) {
@@ -118,34 +118,33 @@ export default function WebhookSettings() {
       return;
     }
 
-    if (editingWebhook) {
-      // Editar webhook existente
-      updateWebhook(
-        { id: editingWebhook.id, updates: { url: trimmedUrl, events: selectedEvents } },
-        {
-          onSuccess: () => {
-            handleCloseDialog();
-          },
-        }
-      );
-    } else {
-      // Criar novo webhook
-      createWebhook(
-        { url: trimmedUrl, events: selectedEvents },
-        {
-          onSuccess: () => {
-            handleCloseDialog();
-          },
-        }
-      );
+    try {
+      if (editingWebhook) {
+        // Editar webhook existente
+        await updateWebhook({ 
+          id: editingWebhook.id, 
+          updates: { url: trimmedUrl, events: selectedEvents } 
+        });
+      } else {
+        // Criar novo webhook
+        await createWebhook({ url: trimmedUrl, events: selectedEvents });
+      }
+      handleCloseDialog();
+    } catch (error) {
+      // O erro já é tratado pelo hook
+      console.error('Error saving webhook:', error);
     }
   };
 
-  const handleToggleActive = (webhook: Webhook) => {
-    updateWebhook({
-      id: webhook.id,
-      updates: { active: !webhook.active },
-    });
+  const handleToggleActive = async (webhook: Webhook) => {
+    try {
+      await updateWebhook({
+        id: webhook.id,
+        updates: { active: !webhook.active },
+      });
+    } catch (error) {
+      console.error('Error toggling webhook:', error);
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -153,11 +152,15 @@ export default function WebhookSettings() {
     setDeleteDialogOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (webhookToDelete) {
-      deleteWebhook(webhookToDelete);
-      setWebhookToDelete(null);
-      setDeleteDialogOpen(false);
+      try {
+        await deleteWebhook(webhookToDelete);
+        setWebhookToDelete(null);
+        setDeleteDialogOpen(false);
+      } catch (error) {
+        console.error('Error deleting webhook:', error);
+      }
     }
   };
 

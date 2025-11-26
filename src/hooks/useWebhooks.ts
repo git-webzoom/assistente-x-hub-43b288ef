@@ -109,8 +109,8 @@ export const useWebhooks = () => {
   return {
     webhooks,
     isLoading,
-    createWebhook: createWebhook.mutate,
-    updateWebhook: updateWebhook.mutate,
-    deleteWebhook: deleteWebhook.mutate,
+    createWebhook: createWebhook.mutateAsync,
+    updateWebhook: updateWebhook.mutateAsync,
+    deleteWebhook: deleteWebhook.mutateAsync,
   };
 };
