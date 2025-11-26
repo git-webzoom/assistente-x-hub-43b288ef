@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { Plus, Search, CheckSquare, Pencil, Trash2, Circle, CheckCircle2 } from 'lucide-react';
+import { Plus, CheckSquare, Pencil, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,6 +15,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -37,8 +37,8 @@ import {
 import { useTasks, type Task } from '@/hooks/useTasks';
 import { useContacts } from '@/hooks/useContacts';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { CustomFieldsSection } from '@/components/CustomFieldsSection';
+import { SearchWithFilter } from '@/components/SearchWithFilter';
 
 export default function Tasks() {
   const { tasks, isLoading, createTask, updateTask, deleteTask } = useTasks();
@@ -174,17 +174,11 @@ export default function Tasks() {
         </Button>
       </div>
 
-      <Card className="p-4">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 flex-1">
-            <Search className="w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por título, descrição ou contato..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="border-0 focus-visible:ring-0"
-            />
-          </div>
+      <SearchWithFilter
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Buscar por título, descrição ou contato..."
+        filter={
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="w-[180px]">
               <SelectValue />
@@ -196,8 +190,8 @@ export default function Tasks() {
               <SelectItem value="completed">Concluídas</SelectItem>
             </SelectContent>
           </Select>
-        </div>
-      </Card>
+        }
+      />
 
       <div className="grid gap-4">
         {isLoading ? (
