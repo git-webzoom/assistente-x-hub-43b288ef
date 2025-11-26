@@ -272,7 +272,7 @@ export default function Products() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
           <DialogDescription>
@@ -282,7 +282,7 @@ export default function Products() {
           </DialogDescription>
         </DialogHeader>
 
-          <ScrollArea className="max-h-[60vh] pr-4">
+          <div className="flex-1 overflow-y-auto pr-4">
             <form id="product-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-2">
@@ -379,7 +379,7 @@ export default function Products() {
               entityId={editingProduct?.id}
             />
           </form>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="flex-shrink-0">
           <Button type="button" variant="outline" onClick={handleCloseDialog}>

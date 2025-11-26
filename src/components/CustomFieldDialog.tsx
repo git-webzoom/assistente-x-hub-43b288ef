@@ -6,7 +6,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { CustomField, CustomFieldEntity, CustomFieldType } from '@/hooks/useCustomFields';
 import { X } from 'lucide-react';
 import { z } from 'zod';
@@ -119,25 +118,25 @@ export const CustomFieldDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {customField ? 'Editar Campo Personalizado' : 'Novo Campo Personalizado'}
           </DialogTitle>
         </DialogHeader>
         
-        <ScrollArea className="max-h-[60vh] pr-4">
+        <div className="flex-1 overflow-y-auto pr-4">
           <form id="custom-field-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
-          <div className="space-y-2">
-            <Label htmlFor="field_label">Nome do Campo *</Label>
-            <Input
-              id="field_label"
-              value={formData.field_label}
-              onChange={(e) => setFormData({ ...formData, field_label: e.target.value })}
-              placeholder="Ex: Número do WhatsApp"
-            />
-            {errors.field_label && <p className="text-sm text-destructive">{errors.field_label}</p>}
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="field_label">Nome do Campo *</Label>
+              <Input
+                id="field_label"
+                value={formData.field_label}
+                onChange={(e) => setFormData({ ...formData, field_label: e.target.value })}
+                placeholder="Ex: Número do WhatsApp"
+              />
+              {errors.field_label && <p className="text-sm text-destructive">{errors.field_label}</p>}
+            </div>
 
           <div className="space-y-2">
             <Label htmlFor="field_name">Identificador *</Label>
@@ -228,7 +227,7 @@ export const CustomFieldDialog = ({
             </Label>
           </div>
           </form>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="flex-shrink-0">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

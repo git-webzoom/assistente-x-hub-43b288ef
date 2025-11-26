@@ -454,7 +454,7 @@ export default function Calendar() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               {editingAppointment ? 'Editar Compromisso' : 'Novo Compromisso'}
@@ -466,7 +466,7 @@ export default function Calendar() {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[60vh] pr-4">
+          <div className="flex-1 overflow-y-auto pr-4">
             <form id="appointment-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Título *</Label>
@@ -565,7 +565,7 @@ export default function Calendar() {
                 entityId={editingAppointment?.id}
               />
             </form>
-          </ScrollArea>
+          </div>
 
           <DialogFooter className="flex justify-between flex-shrink-0">
             {editingAppointment && (
