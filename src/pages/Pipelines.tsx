@@ -19,12 +19,11 @@ import {
 import { usePipelines } from "@/hooks/usePipelines";
 import { useStages } from "@/hooks/useStages";
 import { useCards } from "@/hooks/useCards";
+import type { Card as PipelineCard } from "@/hooks/useCards";
 import { PipelineDialog } from "@/components/PipelineDialog";
 import { StageDialog } from "@/components/StageDialog";
 import { CardDialog } from "@/components/CardDialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/lib/supabase";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   DragEndEvent,
@@ -232,7 +231,6 @@ const StageColumn = ({
 };
 
 const Pipelines = () => {
-  const queryClient = useQueryClient();
   const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
   const [pipelineDialogOpen, setPipelineDialogOpen] = useState(false);
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
@@ -240,6 +238,7 @@ const Pipelines = () => {
   const [selectedStageId, setSelectedStageId] = useState<string>("");
   const [editingCard, setEditingCard] = useState<any>(null);
   const [activeCard, setActiveCard] = useState<any>(null);
+  const [localCards, setLocalCards] = useState<PipelineCard[] | null>(null);
 
   const { pipelines, isLoading: pipelinesLoading, createPipeline } = usePipelines();
   const { stages, isLoading: stagesLoading, createStage, deleteStage, updateStage, updateStageOrder } =
@@ -260,6 +259,12 @@ const Pipelines = () => {
       setSelectedPipelineId(pipelines[0].id);
     }
   }, [pipelines, selectedPipelineId]);
+
+  useEffect(() => {
+    if (cards) {
+      setLocalCards(cards as PipelineCard[]);
+    }
+  }, [cards]);
 
   const handleCreateStage = (name: string) => {
     if (!selectedPipelineId) return;
@@ -299,7 +304,8 @@ const Pipelines = () => {
   };
 
   const handleDragStart = (event: DragStartEvent) => {
-    const card = cards?.find((c) => c.id === event.active.id);
+    const sourceCards = localCards ?? cards;
+    const card = sourceCards?.find((c) => c.id === event.active.id);
     setActiveCard(card);
   };
 
@@ -326,82 +332,105 @@ const Pipelines = () => {
       const activeId = String(active.id);
       const fromStageId = (active.data.current as any)?.stageId as string;
 
+      const allCards = (localCards ?? cards) ?? [];
+      if (allCards.length === 0) return;
+
       let toStageId = fromStageId;
       let targetIndex = 0;
 
       if (overType === "card") {
         const overCardId = String(over.id);
-        const overCard = cards?.find((c) => c.id === overCardId);
+        const overCard = allCards.find((c) => c.id === overCardId);
         if (!overCard) return;
         toStageId = overCard.stage_id;
-        const toCards = (cards || [])
+        const toCards = allCards
           .filter((c) => c.stage_id === toStageId && c.id !== activeId)
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
         targetIndex = toCards.findIndex((c) => c.id === overCardId);
+        if (targetIndex === -1) targetIndex = toCards.length;
       } else if (overType === "stage") {
         toStageId = String(over.id);
-        targetIndex = (cards || []).filter((c) => c.stage_id === toStageId).length;
+        targetIndex = allCards.filter((c) => c.stage_id === toStageId).length;
       } else {
         return;
       }
 
-      const activeCard = cards?.find((c) => c.id === activeId);
-      if (!activeCard) return;
+      const activeCardFull = allCards.find((c) => c.id === activeId);
+      if (!activeCardFull) return;
 
-      // Use batch updates with Promise.all for faster execution
+      // Mesmo estágio: apenas reordena
       if (fromStageId === toStageId) {
-        const list = (cards || [])
+        const list = allCards
           .filter((c) => c.stage_id === fromStageId)
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+
         const oldIndex = list.findIndex((c) => c.id === activeId);
+        if (oldIndex === -1) return;
+
         const newIndex = targetIndex;
         const newList = arrayMove(list, oldIndex, newIndex);
-        
-        // Batch update all positions at once
-        Promise.all(
-          newList.map((c, idx) => 
-            supabase.from("cards").update({ position: idx }).eq("id", c.id)
-          )
-        ).then(() => {
-          queryClient.invalidateQueries({ queryKey: ["cards"] });
+
+        const updates = newList.map((c, idx) => ({
+          id: c.id,
+          position: idx,
+          stageId: c.stage_id,
+        }));
+
+        const nextAllCards = allCards.map((c) => {
+          const u = updates.find((u) => u.id === c.id);
+          return u ? { ...c, position: u.position } : c;
+        });
+
+        setLocalCards(nextAllCards as PipelineCard[]);
+
+        updates.forEach((u) => {
+          updateCard({ id: u.id, position: u.position });
         });
       } else {
-        const fromList = (cards || [])
+        // Mudança de estágio
+        const fromList = allCards
           .filter((c) => c.stage_id === fromStageId && c.id !== activeId)
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
-        const toList = (cards || [])
+        const toList = allCards
           .filter((c) => c.stage_id === toStageId && c.id !== activeId)
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
         const inserted = [...toList];
-        inserted.splice(targetIndex, 0, activeCard);
-        
-        // Batch update all positions at once
+        inserted.splice(targetIndex, 0, activeCardFull);
+
         const updates = [
           ...inserted.map((c, idx) => ({
             id: c.id,
             position: idx,
-            stage_id: c.id === activeId ? toStageId : c.stage_id,
+            stageId: c.id === activeId ? toStageId : c.stage_id,
           })),
           ...fromList.map((c, idx) => ({
             id: c.id,
             position: idx,
-            stage_id: c.stage_id,
+            stageId: c.stage_id,
           })),
         ];
-        
-        Promise.all(
-          updates.map((u) =>
-            supabase.from("cards").update({ position: u.position, stage_id: u.stage_id }).eq("id", u.id)
-          )
-        ).then(() => {
-          queryClient.invalidateQueries({ queryKey: ["cards"] });
+
+        const nextAllCards = allCards.map((c) => {
+          const u = updates.find((u) => u.id === c.id);
+          return u ? { ...c, position: u.position, stage_id: u.stageId } : c;
+        });
+
+        setLocalCards(nextAllCards as PipelineCard[]);
+
+        updates.forEach((u) => {
+          updateCard({
+            id: u.id,
+            position: u.position,
+            ...(u.id === activeId ? { stageId: u.stageId } : {}),
+          });
         });
       }
     }
   };
 
   const getStageCards = (stageId: string) => {
-    return cards?.filter((c) => c.stage_id === stageId) || [];
+    const source = (localCards ?? cards) ?? [];
+    return source.filter((c) => c.stage_id === stageId);
   };
 
   const getStageTotal = (stageId: string) => {
