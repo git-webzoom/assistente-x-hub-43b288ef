@@ -27,12 +27,28 @@ serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const payload: WebhookPayload = await req.json();
+    const rawBody = await req.text();
+    console.log('Raw request body:', rawBody);
+
+    let payload: WebhookPayload;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (parseError) {
+      console.error('Failed to parse JSON:', parseError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400 
+        }
+      );
+    }
     
     console.log('Webhook dispatch triggered:', {
       event: payload.event,
       entity: payload.entity,
       tenant_id: payload.tenant_id,
+      fullPayload: payload,
     });
 
     // Buscar webhooks ativos para este tenant e evento

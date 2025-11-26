@@ -11,17 +11,25 @@ interface WebhookClientPayload {
 
 export async function dispatchWebhookFromClient(payload: WebhookClientPayload) {
   try {
-    const body: WebhookClientPayload = {
-      ...payload,
-      timestamp: payload.timestamp ?? new Date().toISOString(),
+    const body = {
+      event: payload.event,
+      entity: payload.entity,
+      data: payload.data,
+      tenant_id: payload.tenant_id,
+      user_id: payload.user_id || null,
+      timestamp: payload.timestamp || new Date().toISOString(),
     };
 
-    const { error } = await supabase.functions.invoke("dispatch-webhook", {
+    console.log("Dispatching webhook from client:", body);
+
+    const { data, error } = await supabase.functions.invoke("dispatch-webhook", {
       body,
     });
 
     if (error) {
       console.error("Error invoking dispatch-webhook:", error);
+    } else {
+      console.log("Webhook dispatched successfully:", data);
     }
   } catch (err) {
     console.error("Error invoking dispatch-webhook:", err);
