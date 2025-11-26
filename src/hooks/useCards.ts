@@ -178,8 +178,16 @@ export const useCards = (pipelineId?: string) => {
 
       const tenantId = before.tenant_id;
 
+      // Verificar se houve mudanças significativas (não apenas position)
+      const hasSignificantChange =
+        (title !== undefined && title !== before.title) ||
+        (value !== undefined && value !== before.value) ||
+        (description !== undefined && description !== before.description) ||
+        (tags !== undefined && JSON.stringify(tags) !== JSON.stringify(before.tags));
+
       // card.moved: stage mudou
-      if (stageId && before.stage_id !== stageId) {
+      const stageMoved = stageId && before.stage_id !== stageId;
+      if (stageMoved) {
         await dispatchWebhookFromClient({
           event: "card.moved",
           entity: "card",
@@ -193,14 +201,16 @@ export const useCards = (pipelineId?: string) => {
         });
       }
 
-      // card.updated: sempre que houver atualização
-      await dispatchWebhookFromClient({
-        event: "card.updated",
-        entity: "card",
-        data: { before, after },
-        tenant_id: tenantId,
-        user_id: user.id,
-      });
+      // card.updated: APENAS se houver mudança significativa E não for apenas movimentação
+      if (hasSignificantChange && !stageMoved) {
+        await dispatchWebhookFromClient({
+          event: "card.updated",
+          entity: "card",
+          data: { before, after },
+          tenant_id: tenantId,
+          user_id: user.id,
+        });
+      }
 
       return after;
     },
