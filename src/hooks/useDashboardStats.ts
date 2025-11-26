@@ -43,18 +43,17 @@ export const useDashboardStats = () => {
           .eq('tenant_id', tenantId)
       ]);
 
-      // Get today's appointments separately with fallback
-      const today = new Date().toISOString().split('T')[0];
-      const tomorrow = new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0];
+      // Get upcoming appointments separately with fallback
+      const now = new Date().toISOString();
       
       // Try with join first
       let appointmentsToday = await supabase
         .from('appointments')
         .select('*, contact:contacts(name)')
         .eq('tenant_id', tenantId)
-        .gte('start_time', today)
-        .lt('start_time', tomorrow)
-        .order('start_time', { ascending: true });
+        .gte('start_time', now)
+        .order('start_time', { ascending: true })
+        .limit(10);
 
       // If join fails, try without join
       if (appointmentsToday.error) {
@@ -62,9 +61,9 @@ export const useDashboardStats = () => {
           .from('appointments')
           .select('*')
           .eq('tenant_id', tenantId)
-          .gte('start_time', today)
-          .lt('start_time', tomorrow)
-          .order('start_time', { ascending: true });
+          .gte('start_time', now)
+          .order('start_time', { ascending: true })
+          .limit(10);
       }
 
       // Calculate conversion rate (cards in final stage / total cards)

@@ -127,7 +127,7 @@ const DashboardHome = () => {
               </>
             ) : !stats?.appointments || stats.appointments.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                Nenhum compromisso agendado para hoje
+                Nenhum compromisso agendado
               </p>
             ) : (
               stats.appointments.map((appointment: any, i: number) => (
@@ -141,7 +141,11 @@ const DashboardHome = () => {
                       {appointment.contact?.name || 'Sem contato'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(appointment.start_time).toLocaleTimeString('pt-BR', {
+                      {new Date(appointment.start_time).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })} às {new Date(appointment.start_time).toLocaleTimeString('pt-BR', {
                         hour: '2-digit',
                         minute: '2-digit'
                       })}
