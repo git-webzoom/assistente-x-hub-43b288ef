@@ -16,9 +16,26 @@ interface WebhookPayload {
 }
 
 serve(async (req) => {
+  // VERSION CHECK - to confirm new version is deployed
+  const VERSION = '2.1-normalized-payload';
+  console.log(`🚀 dispatch-webhook v${VERSION}`);
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
+  }
+
+  // Health check endpoint
+  if (req.method === 'GET') {
+    return new Response(
+      JSON.stringify({ 
+        status: 'ok', 
+        version: VERSION,
+        message: 'Webhook dispatcher is running',
+        accepts: ['event', 'event_type', 'type'],
+      }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
   }
 
   try {
@@ -28,7 +45,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const rawBody = await req.text();
-    console.log('Raw request body:', rawBody);
+    console.log('📨 Raw request body:', rawBody);
 
     let incoming: any;
     try {
@@ -45,6 +62,7 @@ serve(async (req) => {
     }
 
     // Normalize payload to support different client shapes (event, event_type, etc.)
+    // This ensures we NEVER require a specific field name
     const payload: WebhookPayload = {
       event: incoming.event ?? incoming.event_type ?? incoming.type ?? 'unknown',
       entity: incoming.entity ?? incoming.resource ?? 'unknown',
@@ -54,13 +72,12 @@ serve(async (req) => {
       timestamp: incoming.timestamp ?? new Date().toISOString(),
     };
     
-    console.log('Webhook dispatch triggered (normalized):', {
-      raw: incoming,
+    console.log('✅ Webhook payload normalized:', {
+      original_keys: Object.keys(incoming),
       event: payload.event,
       entity: payload.entity,
       tenant_id: payload.tenant_id,
       user_id: payload.user_id,
-      timestamp: payload.timestamp,
     });
 
     // Buscar webhooks ativos para este tenant e evento

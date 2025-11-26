@@ -36,6 +36,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { WebhookDebug } from "@/components/WebhookDebug";
 
 const AVAILABLE_EVENTS = [
   { id: "card.created", label: "Card criado" },
@@ -259,6 +260,10 @@ export default function WebhookSettings() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <div className="mb-6">
+        <WebhookDebug />
+      </div>
 
       <div className="border rounded-lg">
         <Table>
