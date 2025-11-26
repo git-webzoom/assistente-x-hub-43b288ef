@@ -38,6 +38,7 @@ import { useTasks, type Task } from '@/hooks/useTasks';
 import { useContacts } from '@/hooks/useContacts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CustomFieldsSection } from '@/components/CustomFieldsSection';
+import { ContactSelect } from '@/components/ContactSelect';
 import { SearchWithFilter } from '@/components/SearchWithFilter';
 
 export default function Tasks() {
@@ -358,22 +359,12 @@ export default function Tasks() {
 
               <div className="space-y-2">
                 <Label htmlFor="contact_id">Contato</Label>
-                <Select
-                  value={formData.contact_id}
-                  onValueChange={(value) => setFormData({ ...formData, contact_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione um contato" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {contacts?.map((contact) => (
-                      <SelectItem key={contact.id} value={contact.id}>
-                        {contact.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <ContactSelect
+                  value={formData.contact_id || undefined}
+                  onChange={(value) =>
+                    setFormData({ ...formData, contact_id: value || '' })
+                  }
+                />
               </div>
 
               <CustomFieldsSection
