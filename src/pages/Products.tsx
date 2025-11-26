@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useProducts, type Product } from '@/hooks/useProducts';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { CustomFieldsSection } from '@/components/CustomFieldsSection';
 
 export default function Products() {
@@ -271,17 +272,18 @@ export default function Products() {
       </Card>
 
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
-            <DialogDescription>
-              {editingProduct
-                ? 'Atualize as informações do produto'
-                : 'Preencha os dados do novo produto'}
-            </DialogDescription>
-          </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+        <DialogHeader className="flex-shrink-0">
+          <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
+          <DialogDescription>
+            {editingProduct
+              ? 'Atualize as informações do produto'
+              : 'Preencha os dados do novo produto'}
+          </DialogDescription>
+        </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <ScrollArea className="flex-1 pr-4">
+          <form id="product-form" onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="name">Nome do Produto *</Label>
@@ -376,18 +378,19 @@ export default function Products() {
               entityType="product"
               entityId={editingProduct?.id}
             />
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
-                Cancelar
-              </Button>
-              <Button type="submit">
-                {editingProduct ? 'Salvar Alterações' : 'Criar Produto'}
-              </Button>
-            </DialogFooter>
           </form>
-        </DialogContent>
-      </Dialog>
+        </ScrollArea>
+
+        <DialogFooter className="flex-shrink-0">
+          <Button type="button" variant="outline" onClick={handleCloseDialog}>
+            Cancelar
+          </Button>
+          <Button type="submit" form="product-form">
+            {editingProduct ? 'Salvar Alterações' : 'Criar Produto'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
