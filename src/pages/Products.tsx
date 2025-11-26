@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { Plus, Search, Pencil, Trash2, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -35,8 +34,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useProducts, type Product } from '@/hooks/useProducts';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { CustomFieldsSection } from '@/components/CustomFieldsSection';
+import { SearchInput } from '@/components/SearchInput';
+import { DataTableWrapper } from '@/components/DataTableWrapper';
 
 export default function Products() {
   const { products, isLoading, createProduct, updateProduct, deleteProduct } = useProducts();
@@ -144,19 +144,13 @@ export default function Products() {
         </Button>
       </div>
 
-      <Card className="p-4">
-        <div className="flex items-center gap-2">
-          <Search className="w-5 h-5 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, SKU ou categoria..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="border-0 focus-visible:ring-0"
-          />
-        </div>
-      </Card>
+      <SearchInput
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Buscar por nome, SKU ou categoria..."
+      />
 
-      <Card>
+      <DataTableWrapper>
         <Table>
           <TableHeader>
             <TableRow>
@@ -269,7 +263,7 @@ export default function Products() {
             )}
           </TableBody>
         </Table>
-      </Card>
+      </DataTableWrapper>
 
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">

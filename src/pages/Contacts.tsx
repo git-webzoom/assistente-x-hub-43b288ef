@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Table,
   TableBody,
@@ -28,7 +27,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { ContactFormDialog } from '@/components/ContactFormDialog';
 import { useContacts, Contact } from '@/hooks/useContacts';
-import { Plus, Search, Users, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { Plus, Users, MoreVertical, Edit, Trash2 } from 'lucide-react';
+import { SearchInput } from '@/components/SearchInput';
+import { DataTableWrapper } from '@/components/DataTableWrapper';
 
 const Contacts = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -76,31 +77,25 @@ const Contacts = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Contatos</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold">Contatos</h1>
+          <p className="text-muted-foreground mt-1">
             Gerencie seus contatos e relacionamentos
           </p>
         </div>
         <Button onClick={handleNewContact}>
-          <Plus className="mr-2 h-4 w-4" />
+          <Plus className="w-4 h-4 mr-2" />
           Novo Contato
         </Button>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por nome, email ou empresa..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      <SearchInput
+        value={searchQuery}
+        onChange={setSearchQuery}
+        placeholder="Buscar por nome, email ou empresa..."
+      />
 
-      {/* Contacts Table */}
       {isLoading ? (
-        <div className="border rounded-lg">
+        <DataTableWrapper>
           <Table>
             <TableHeader>
               <TableRow>
@@ -123,7 +118,7 @@ const Contacts = () => {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </DataTableWrapper>
       ) : contacts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
@@ -145,7 +140,7 @@ const Contacts = () => {
           )}
         </div>
       ) : (
-        <div className="border rounded-lg">
+        <DataTableWrapper>
           <Table>
             <TableHeader>
               <TableRow>
@@ -189,7 +184,7 @@ const Contacts = () => {
               ))}
             </TableBody>
           </Table>
-        </div>
+        </DataTableWrapper>
       )}
 
       {/* Form Dialog */}
