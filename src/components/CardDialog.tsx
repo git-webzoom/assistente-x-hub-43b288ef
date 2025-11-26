@@ -59,9 +59,9 @@ export const CardDialog = ({
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="max-h-[60vh] pr-4">
           <form id="card-form" onSubmit={handleSubmit}>
-            <div className="space-y-4 py-4">
+            <div className="space-y-4 pb-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Título</Label>
                 <Input
