@@ -42,6 +42,7 @@ import { useAppointments, type Appointment } from '@/hooks/useAppointments';
 import { useContacts } from '@/hooks/useContacts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { CustomFieldsSection } from '@/components/CustomFieldsSection';
 
 export default function Calendar() {
   const { appointments, isLoading, createAppointment, updateAppointment, deleteAppointment } =
@@ -557,6 +558,11 @@ export default function Calendar() {
                 </Select>
               </div>
             </div>
+
+            <CustomFieldsSection
+              entityType="appointment"
+              entityId={editingAppointment?.id}
+            />
 
             <DialogFooter className="flex justify-between">
               {editingAppointment && (

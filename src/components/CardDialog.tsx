@@ -11,17 +11,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CustomFieldsSection } from "@/components/CustomFieldsSection";
 
 interface CardDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: { title: string; value: number; description?: string; tags?: string[] }) => void;
+  cardId?: string;
 }
 
 export const CardDialog = ({
   open,
   onOpenChange,
   onSubmit,
+  cardId,
 }: CardDialogProps) => {
   const [title, setTitle] = useState("");
   const [value, setValue] = useState("");
@@ -97,6 +100,12 @@ export const CardDialog = ({
               />
             </div>
           </div>
+          
+          <CustomFieldsSection
+            entityType="card"
+            entityId={cardId}
+          />
+
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar

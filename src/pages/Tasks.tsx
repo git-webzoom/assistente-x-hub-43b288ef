@@ -37,6 +37,7 @@ import {
 import { useTasks, type Task } from '@/hooks/useTasks';
 import { useContacts } from '@/hooks/useContacts';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CustomFieldsSection } from '@/components/CustomFieldsSection';
 
 export default function Tasks() {
   const { tasks, isLoading, createTask, updateTask, deleteTask } = useTasks();
@@ -378,6 +379,11 @@ export default function Tasks() {
                 </SelectContent>
               </Select>
             </div>
+
+            <CustomFieldsSection
+              entityType="task"
+              entityId={editingTask?.id}
+            />
 
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleCloseDialog}>
