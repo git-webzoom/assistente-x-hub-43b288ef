@@ -30,25 +30,37 @@ serve(async (req) => {
     const rawBody = await req.text();
     console.log('Raw request body:', rawBody);
 
-    let payload: WebhookPayload;
+    let incoming: any;
     try {
-      payload = JSON.parse(rawBody);
+      incoming = JSON.parse(rawBody);
     } catch (parseError) {
       console.error('Failed to parse JSON:', parseError);
       return new Response(
         JSON.stringify({ error: 'Invalid JSON in request body' }),
         { 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-          status: 400 
+          status: 400, 
         }
       );
     }
+
+    // Normalize payload to support different client shapes (event, event_type, etc.)
+    const payload: WebhookPayload = {
+      event: incoming.event ?? incoming.event_type ?? incoming.type ?? 'unknown',
+      entity: incoming.entity ?? incoming.resource ?? 'unknown',
+      data: incoming.data ?? incoming.payload ?? incoming,
+      tenant_id: incoming.tenant_id ?? incoming.tenantId ?? incoming.tenant ?? 'unknown',
+      user_id: incoming.user_id ?? incoming.userId ?? null,
+      timestamp: incoming.timestamp ?? new Date().toISOString(),
+    };
     
-    console.log('Webhook dispatch triggered:', {
+    console.log('Webhook dispatch triggered (normalized):', {
+      raw: incoming,
       event: payload.event,
       entity: payload.entity,
       tenant_id: payload.tenant_id,
-      fullPayload: payload,
+      user_id: payload.user_id,
+      timestamp: payload.timestamp,
     });
 
     // Buscar webhooks ativos para este tenant e evento
