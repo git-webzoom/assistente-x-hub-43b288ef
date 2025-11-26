@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { dispatchWebhookFromClient } from "@/lib/webhookClient";
 
 export interface Card {
   id: string;
@@ -101,6 +102,16 @@ export const useCards = (pipelineId?: string) => {
         .single();
 
       if (error) throw error;
+
+      // Disparar webhook de criação
+      await dispatchWebhookFromClient({
+        event: "card.created",
+        entity: "card",
+        data,
+        tenant_id: tenantId,
+        user_id: user.id,
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -137,6 +148,17 @@ export const useCards = (pipelineId?: string) => {
       description?: string;
       tags?: string[];
     }) => {
+      if (!user?.id) throw new Error("User not authenticated");
+
+      // Buscar card atual para montar payloads de webhook
+      const { data: before, error: fetchError } = await supabase
+        .from("cards")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (fetchError || !before) throw fetchError || new Error("Card not found");
+
       const updates: any = {};
       if (stageId) updates.stage_id = stageId;
       if (position !== undefined) updates.position = position;
@@ -145,9 +167,42 @@ export const useCards = (pipelineId?: string) => {
       if (description !== undefined) updates.description = description;
       if (tags !== undefined) updates.tags = tags;
 
-      const { error } = await supabase.from("cards").update(updates).eq("id", id);
+      const { data: after, error } = await supabase
+        .from("cards")
+        .update(updates)
+        .eq("id", id)
+        .select("*")
+        .single();
 
-      if (error) throw error;
+      if (error || !after) throw error || new Error("Failed to update card");
+
+      const tenantId = before.tenant_id;
+
+      // card.moved: stage mudou
+      if (stageId && before.stage_id !== stageId) {
+        await dispatchWebhookFromClient({
+          event: "card.moved",
+          entity: "card",
+          data: {
+            card: after,
+            from_stage_id: before.stage_id,
+            to_stage_id: stageId,
+          },
+          tenant_id: tenantId,
+          user_id: user.id,
+        });
+      }
+
+      // card.updated: sempre que houver atualização
+      await dispatchWebhookFromClient({
+        event: "card.updated",
+        entity: "card",
+        data: { before, after },
+        tenant_id: tenantId,
+        user_id: user.id,
+      });
+
+      return after;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["cards"] });
@@ -173,8 +228,27 @@ export const useCards = (pipelineId?: string) => {
 
   const deleteCard = useMutation({
     mutationFn: async (id: string) => {
+      if (!user?.id) throw new Error("User not authenticated");
+
+      // Buscar card antes de deletar para mandar no webhook
+      const { data: before, error: fetchError } = await supabase
+        .from("cards")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+      if (fetchError || !before) throw fetchError || new Error("Card not found");
+
       const { error } = await supabase.from("cards").delete().eq("id", id);
       if (error) throw error;
+
+      await dispatchWebhookFromClient({
+        event: "card.deleted",
+        entity: "card",
+        data: before,
+        tenant_id: before.tenant_id,
+        user_id: user.id,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cards"] });
