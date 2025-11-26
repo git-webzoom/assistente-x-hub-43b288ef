@@ -5,10 +5,9 @@ import { useToast } from '@/hooks/use-toast';
 export interface Webhook {
   id: string;
   tenant_id: string;
-  event: string;
-  events: string[];
   url: string;
-  active: boolean;
+  events: string[];
+  is_active: boolean;
   created_at: string;
 }
 
@@ -33,7 +32,7 @@ export const useWebhooks = () => {
     mutationFn: async ({ url, events }: { url: string; events: string[] }) => {
       const { data, error } = await supabase
         .from('webhooks')
-        .insert([{ url, events, event: events[0] || 'all', active: true }])
+        .insert([{ url, events, is_active: true }])
         .select()
         .single();
 
