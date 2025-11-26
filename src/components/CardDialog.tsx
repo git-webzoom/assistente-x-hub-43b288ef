@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -19,6 +19,13 @@ interface CardDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: { title: string; value: number; description?: string; tags?: string[] }) => void;
   cardId?: string;
+  existingCard?: {
+    id: string;
+    title: string;
+    value: number;
+    description?: string;
+    tags?: string[];
+  };
 }
 
 export const CardDialog = ({
@@ -26,11 +33,27 @@ export const CardDialog = ({
   onOpenChange,
   onSubmit,
   cardId,
+  existingCard,
 }: CardDialogProps) => {
   const [title, setTitle] = useState("");
   const [value, setValue] = useState("");
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
+
+  // Populate form when editing
+  useEffect(() => {
+    if (existingCard) {
+      setTitle(existingCard.title);
+      setValue(existingCard.value.toString());
+      setDescription(existingCard.description || "");
+      setTags(existingCard.tags?.join(", ") || "");
+    } else {
+      setTitle("");
+      setValue("");
+      setDescription("");
+      setTags("");
+    }
+  }, [existingCard]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,9 +76,9 @@ export const CardDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
-          <DialogTitle>Novo Card</DialogTitle>
+          <DialogTitle>{existingCard ? "Editar Card" : "Novo Card"}</DialogTitle>
           <DialogDescription>
-            Adicione uma nova oportunidade à pipeline
+            {existingCard ? "Edite as informações da oportunidade" : "Adicione uma nova oportunidade à pipeline"}
           </DialogDescription>
         </DialogHeader>
         
@@ -115,7 +138,9 @@ export const CardDialog = ({
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button type="submit" form="card-form">Criar Card</Button>
+          <Button type="submit" form="card-form">
+            {existingCard ? "Salvar" : "Criar Card"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

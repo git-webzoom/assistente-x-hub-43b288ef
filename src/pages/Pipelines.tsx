@@ -23,6 +23,8 @@ import { PipelineDialog } from "@/components/PipelineDialog";
 import { StageDialog } from "@/components/StageDialog";
 import { CardDialog } from "@/components/CardDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { supabase } from "@/lib/supabase";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
   DragEndEvent,
@@ -43,11 +45,13 @@ interface DraggableCardProps {
     value: number;
     tags: string[] | null;
     position?: number;
+    description?: string;
   };
   onDelete: (id: string) => void;
+  onEdit: (card: DraggableCardProps["card"]) => void;
 }
 
-const DraggableCard = ({ card, onDelete }: DraggableCardProps) => {
+const DraggableCard = ({ card, onDelete, onEdit }: DraggableCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: card.id, data: { type: "card", stageId: card.stage_id } });
 
@@ -74,6 +78,10 @@ const DraggableCard = ({ card, onDelete }: DraggableCardProps) => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
+            <DropdownMenuItem onClick={() => onEdit(card)}>
+              <Pencil className="w-4 h-4 mr-2" />
+              Editar
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onDelete(card.id)} className="text-ax-error">
               Excluir
             </DropdownMenuItem>
@@ -110,6 +118,7 @@ const StageColumn = ({
   onAddCard,
   onDeleteStage,
   onDeleteCard,
+  onEditCard,
   onRenameStage,
   getStageTotal,
 }: {
@@ -118,6 +127,7 @@ const StageColumn = ({
   onAddCard: () => void;
   onDeleteStage: () => void;
   onDeleteCard: (id: string) => void;
+  onEditCard: (card: DraggableCardProps["card"]) => void;
   onRenameStage: (name: string) => void;
   getStageTotal: (stageId: string) => number;
 }) => {
@@ -177,6 +187,15 @@ const StageColumn = ({
               </Button>
             </div>
             <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onAddCard}
+                className="h-7 text-xs"
+              >
+                <Plus className="w-3 h-3 mr-1" />
+                Card
+              </Button>
               <span className="text-sm text-muted-foreground">{cards.length}</span>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -203,17 +222,8 @@ const StageColumn = ({
             data-stage-id={stage.id}
           >
             {cards.map((card) => (
-              <DraggableCard key={card.id} card={card} onDelete={onDeleteCard} />
+              <DraggableCard key={card.id} card={card} onDelete={onDeleteCard} onEdit={onEditCard} />
             ))}
-
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-muted-foreground"
-              onClick={onAddCard}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Adicionar card
-            </Button>
           </div>
         </SortableContext>
       </Card>
@@ -222,11 +232,13 @@ const StageColumn = ({
 };
 
 const Pipelines = () => {
+  const queryClient = useQueryClient();
   const [selectedPipelineId, setSelectedPipelineId] = useState<string>("");
   const [pipelineDialogOpen, setPipelineDialogOpen] = useState(false);
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
   const [cardDialogOpen, setCardDialogOpen] = useState(false);
   const [selectedStageId, setSelectedStageId] = useState<string>("");
+  const [editingCard, setEditingCard] = useState<any>(null);
   const [activeCard, setActiveCard] = useState<any>(null);
 
   const { pipelines, isLoading: pipelinesLoading, createPipeline } = usePipelines();
@@ -261,10 +273,29 @@ const Pipelines = () => {
     description?: string;
     tags?: string[];
   }) => {
-    if (!selectedStageId || !selectedPipelineId) return;
-    const stageCards = cards?.filter((c) => c.stage_id === selectedStageId) || [];
-    const position = stageCards.length;
-    createCard({ pipelineId: selectedPipelineId, stageId: selectedStageId, ...data, position });
+    if (editingCard) {
+      // Update existing card
+      updateCard({ 
+        id: editingCard.id, 
+        title: data.title,
+        value: data.value,
+        description: data.description,
+        tags: data.tags,
+      });
+      setEditingCard(null);
+    } else {
+      // Create new card
+      if (!selectedStageId || !selectedPipelineId) return;
+      const stageCards = cards?.filter((c) => c.stage_id === selectedStageId) || [];
+      const position = stageCards.length;
+      createCard({ pipelineId: selectedPipelineId, stageId: selectedStageId, ...data, position });
+    }
+  };
+
+  const handleEditCard = (card: any) => {
+    setEditingCard(card);
+    setSelectedStageId(card.stage_id);
+    setCardDialogOpen(true);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -317,6 +348,7 @@ const Pipelines = () => {
       const activeCard = cards?.find((c) => c.id === activeId);
       if (!activeCard) return;
 
+      // Use batch updates with Promise.all for faster execution
       if (fromStageId === toStageId) {
         const list = (cards || [])
           .filter((c) => c.stage_id === fromStageId)
@@ -324,7 +356,15 @@ const Pipelines = () => {
         const oldIndex = list.findIndex((c) => c.id === activeId);
         const newIndex = targetIndex;
         const newList = arrayMove(list, oldIndex, newIndex);
-        newList.forEach((c, idx) => updateCard({ id: c.id, position: idx }));
+        
+        // Batch update all positions at once
+        Promise.all(
+          newList.map((c, idx) => 
+            supabase.from("cards").update({ position: idx }).eq("id", c.id)
+          )
+        ).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["cards"] });
+        });
       } else {
         const fromList = (cards || [])
           .filter((c) => c.stage_id === fromStageId && c.id !== activeId)
@@ -334,12 +374,28 @@ const Pipelines = () => {
           .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
         const inserted = [...toList];
         inserted.splice(targetIndex, 0, activeCard);
-        // Atualiza destino (inclui stageId para o card movido)
-        inserted.forEach((c, idx) =>
-          updateCard({ id: c.id, position: idx, ...(c.id === activeId ? { stageId: toStageId } : {}) })
-        );
-        // Reindexa origem
-        fromList.forEach((c, idx) => updateCard({ id: c.id, position: idx }));
+        
+        // Batch update all positions at once
+        const updates = [
+          ...inserted.map((c, idx) => ({
+            id: c.id,
+            position: idx,
+            stage_id: c.id === activeId ? toStageId : c.stage_id,
+          })),
+          ...fromList.map((c, idx) => ({
+            id: c.id,
+            position: idx,
+            stage_id: c.stage_id,
+          })),
+        ];
+        
+        Promise.all(
+          updates.map((u) =>
+            supabase.from("cards").update({ position: u.position, stage_id: u.stage_id }).eq("id", u.id)
+          )
+        ).then(() => {
+          queryClient.invalidateQueries({ queryKey: ["cards"] });
+        });
       }
     }
   };
@@ -422,11 +478,13 @@ const Pipelines = () => {
                         stage={stage}
                         cards={stageCards}
                         onAddCard={() => {
+                          setEditingCard(null);
                           setSelectedStageId(stage.id);
                           setCardDialogOpen(true);
                         }}
                         onDeleteStage={() => deleteStage(stage.id)}
                         onDeleteCard={deleteCard}
+                        onEditCard={handleEditCard}
                         onRenameStage={(name) => updateStage({ id: stage.id, name })}
                         getStageTotal={getStageTotal}
                       />
@@ -490,8 +548,13 @@ const Pipelines = () => {
 
       <CardDialog
         open={cardDialogOpen}
-        onOpenChange={setCardDialogOpen}
+        onOpenChange={(open) => {
+          setCardDialogOpen(open);
+          if (!open) setEditingCard(null);
+        }}
         onSubmit={handleCreateCard}
+        cardId={editingCard?.id}
+        existingCard={editingCard}
       />
     </div>
   );
