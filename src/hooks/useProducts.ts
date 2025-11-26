@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from './useAuth';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Product {
@@ -18,6 +19,7 @@ export interface Product {
 }
 
 export const useProducts = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -36,9 +38,19 @@ export const useProducts = () => {
 
   const createProduct = useMutation({
     mutationFn: async (product: Omit<Product, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!userData?.tenant_id) throw new Error('Tenant not found');
+
       const { data, error } = await supabase
         .from('products')
-        .insert([product])
+        .insert([{ ...product, tenant_id: userData.tenant_id }])
         .select()
         .single();
 
