@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from './useAuth';
 
 export interface Webhook {
   id: string;
@@ -14,25 +15,48 @@ export interface Webhook {
 export const useWebhooks = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: webhooks, isLoading } = useQuery({
-    queryKey: ['webhooks'],
+    queryKey: ['webhooks', user?.id],
     queryFn: async () => {
+      if (!user?.id) throw new Error('User not authenticated');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!userData?.tenant_id) throw new Error('Tenant not found');
+
       const { data, error } = await supabase
         .from('webhooks')
         .select('*')
+        .eq('tenant_id', userData.tenant_id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data as Webhook[];
     },
+    enabled: !!user?.id,
   });
 
   const createWebhook = useMutation({
     mutationFn: async ({ url, events }: { url: string; events: string[] }) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
+      const { data: userData } = await supabase
+        .from('users')
+        .select('tenant_id')
+        .eq('id', user.id)
+        .single();
+
+      if (!userData?.tenant_id) throw new Error('Tenant not found');
+
       const { data, error } = await supabase
         .from('webhooks')
-        .insert([{ url, events, is_active: true }])
+        .insert([{ url, events, is_active: true, tenant_id: userData.tenant_id }])
         .select()
         .single();
 
