@@ -51,7 +51,7 @@ export const CardDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] flex flex-col">
+      <DialogContent className="max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Novo Card</DialogTitle>
           <DialogDescription>
@@ -59,7 +59,7 @@ export const CardDialog = ({
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="max-h-[60vh] pr-4">
+        <div className="flex-1 overflow-y-auto pr-4">
           <form id="card-form" onSubmit={handleSubmit}>
             <div className="space-y-4 pb-4">
               <div className="space-y-2">
@@ -109,7 +109,7 @@ export const CardDialog = ({
               />
             </div>
           </form>
-        </ScrollArea>
+        </div>
 
         <DialogFooter className="flex-shrink-0">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
