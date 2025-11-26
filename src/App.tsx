@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import DashboardHome from "./pages/DashboardHome";
 import Pipelines from "./pages/Pipelines";
 import Contacts from "./pages/Contacts";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
                 <Route index element={<DashboardHome />} />
                 <Route path="pipelines" element={<Pipelines />} />
                 <Route path="contacts" element={<Contacts />} />
+                <Route path="settings" element={<Settings />} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

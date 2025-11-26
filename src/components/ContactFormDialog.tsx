@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Contact } from '@/hooks/useContacts';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
+import { CustomFieldsSection } from './CustomFieldsSection';
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, 'Nome é obrigatório').max(100, 'Nome muito longo'),
@@ -203,6 +204,11 @@ export const ContactFormDialog = ({
             />
             {errors.notes && <p className="text-sm text-destructive">{errors.notes}</p>}
           </div>
+
+          <CustomFieldsSection
+            entityType="contact"
+            entityId={contact?.id}
+          />
 
           <DialogFooter>
             <Button
