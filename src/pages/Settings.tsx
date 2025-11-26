@@ -1,6 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CustomFieldSettings from './settings/CustomFieldSettings';
 import WebhookSettings from './settings/WebhookSettings';
+import ApiKeySettings from './settings/ApiKeySettings';
 
 export default function Settings() {
   return (
@@ -16,6 +17,7 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="custom-fields">Campos Personalizados</TabsTrigger>
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+          <TabsTrigger value="api">API</TabsTrigger>
         </TabsList>
 
         <TabsContent value="custom-fields">
@@ -24,6 +26,10 @@ export default function Settings() {
 
         <TabsContent value="webhooks">
           <WebhookSettings />
+        </TabsContent>
+
+        <TabsContent value="api">
+          <ApiKeySettings />
         </TabsContent>
       </Tabs>
     </div>
