@@ -28,7 +28,8 @@ export const useTasks = () => {
   const { data: tasks, isLoading } = useQuery({
     queryKey: ['tasks'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Primeiro tenta buscar com join
+      const { data: tasksWithContact, error: errorWithJoin } = await supabase
         .from('tasks')
         .select(`
           *,
@@ -36,8 +37,36 @@ export const useTasks = () => {
         `)
         .order('due_date', { ascending: true, nullsFirst: false });
 
-      if (error) throw error;
-      return data as Task[];
+      // Se deu certo, retorna
+      if (!errorWithJoin && tasksWithContact) {
+        return tasksWithContact as Task[];
+      }
+
+      // Se falhou por causa do relacionamento, busca sem join
+      const { data: tasksWithoutContact, error: errorWithoutJoin } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('due_date', { ascending: true, nullsFirst: false });
+
+      if (errorWithoutJoin) throw errorWithoutJoin;
+
+      // Se temos contact_ids, busca os contatos separadamente
+      const taskIds = tasksWithoutContact?.filter(t => t.contact_id).map(t => t.contact_id) || [];
+      
+      if (taskIds.length > 0) {
+        const { data: contacts } = await supabase
+          .from('contacts')
+          .select('id, name, email')
+          .in('id', taskIds);
+
+        // Adiciona os contatos às tarefas
+        return tasksWithoutContact?.map(task => ({
+          ...task,
+          contact: contacts?.find(c => c.id === task.contact_id),
+        })) as Task[];
+      }
+
+      return tasksWithoutContact as Task[];
     },
   });
 

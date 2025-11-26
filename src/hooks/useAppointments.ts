@@ -28,7 +28,8 @@ export const useAppointments = () => {
   const { data: appointments, isLoading } = useQuery({
     queryKey: ['appointments'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Primeiro tenta buscar com join
+      const { data: appointmentsWithContact, error: errorWithJoin } = await supabase
         .from('appointments')
         .select(`
           *,
@@ -36,8 +37,36 @@ export const useAppointments = () => {
         `)
         .order('start_time', { ascending: true });
 
-      if (error) throw error;
-      return data as Appointment[];
+      // Se deu certo, retorna
+      if (!errorWithJoin && appointmentsWithContact) {
+        return appointmentsWithContact as Appointment[];
+      }
+
+      // Se falhou por causa do relacionamento, busca sem join
+      const { data: appointmentsWithoutContact, error: errorWithoutJoin } = await supabase
+        .from('appointments')
+        .select('*')
+        .order('start_time', { ascending: true });
+
+      if (errorWithoutJoin) throw errorWithoutJoin;
+
+      // Se temos contact_ids, busca os contatos separadamente
+      const contactIds = appointmentsWithoutContact?.filter(a => a.contact_id).map(a => a.contact_id) || [];
+      
+      if (contactIds.length > 0) {
+        const { data: contacts } = await supabase
+          .from('contacts')
+          .select('id, name, email')
+          .in('id', contactIds);
+
+        // Adiciona os contatos aos compromissos
+        return appointmentsWithoutContact?.map(appointment => ({
+          ...appointment,
+          contact: contacts?.find(c => c.id === appointment.contact_id),
+        })) as Appointment[];
+      }
+
+      return appointmentsWithoutContact as Appointment[];
     },
   });
 
