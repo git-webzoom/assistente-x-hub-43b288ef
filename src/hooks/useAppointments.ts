@@ -95,6 +95,7 @@ export const useAppointments = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       toast({
         title: 'Compromisso criado',
         description: 'O compromisso foi criado com sucesso.',
@@ -124,6 +125,7 @@ export const useAppointments = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       toast({
         title: 'Compromisso atualizado',
         description: 'O compromisso foi atualizado com sucesso.',
@@ -146,6 +148,7 @@ export const useAppointments = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
       toast({
         title: 'Compromisso excluído',
         description: 'O compromisso foi excluído com sucesso.',
