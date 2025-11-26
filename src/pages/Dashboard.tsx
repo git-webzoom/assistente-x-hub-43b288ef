@@ -11,6 +11,7 @@ import {
   LogOut,
   Bell,
   Search,
+  BookOpen,
 } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ const Dashboard = () => {
     { icon: Kanban, label: "Funis", path: "/dashboard/pipelines" },
     { icon: Calendar, label: "Agenda", path: "/dashboard/calendar" },
     { icon: CheckSquare, label: "Tarefas", path: "/dashboard/tasks" },
+    { icon: BookOpen, label: "API", path: "/dashboard/api-docs" },
     { icon: Settings, label: "Configurações", path: "/dashboard/settings" },
   ];
 
