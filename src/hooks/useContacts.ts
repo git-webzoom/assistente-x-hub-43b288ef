@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { toast } from '@/hooks/use-toast';
+import { dispatchWebhookFromClient } from '@/lib/webhookClient';
 
 export interface Contact {
   id: string;
@@ -73,6 +74,16 @@ export const useContacts = (searchQuery?: string) => {
         .single();
 
       if (error) throw error;
+
+      // Disparar webhook contact.created
+      await dispatchWebhookFromClient({
+        event: 'contact.created',
+        entity: 'contact',
+        data,
+        tenant_id: userData.tenant_id,
+        user_id: user.id,
+      });
+
       return data;
     },
     onSuccess: () => {
@@ -94,7 +105,18 @@ export const useContacts = (searchQuery?: string) => {
 
   const updateContact = useMutation({
     mutationFn: async ({ id, updates }: { id: string; updates: Partial<Contact> }) => {
-      const { data, error } = await supabase
+      if (!user?.id) throw new Error('User not authenticated');
+
+      // Buscar contato antes de atualizar
+      const { data: before, error: fetchError } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !before) throw fetchError || new Error('Contact not found');
+
+      const { data: after, error } = await supabase
         .from('contacts')
         .update(updates)
         .eq('id', id)
@@ -102,7 +124,23 @@ export const useContacts = (searchQuery?: string) => {
         .single();
 
       if (error) throw error;
-      return data;
+
+      // Disparar webhook contact.updated apenas se houve mudanças significativas
+      const hasSignificantChange = Object.keys(updates).some(
+        key => updates[key as keyof Contact] !== before[key as keyof Contact]
+      );
+
+      if (hasSignificantChange) {
+        await dispatchWebhookFromClient({
+          event: 'contact.updated',
+          entity: 'contact',
+          data: { before, after },
+          tenant_id: before.tenant_id,
+          user_id: user.id,
+        });
+      }
+
+      return after;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
@@ -122,12 +160,32 @@ export const useContacts = (searchQuery?: string) => {
 
   const deleteContact = useMutation({
     mutationFn: async (id: string) => {
+      if (!user?.id) throw new Error('User not authenticated');
+
+      // Buscar contato antes de deletar
+      const { data: contact, error: fetchError } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (fetchError || !contact) throw fetchError || new Error('Contact not found');
+
       const { error } = await supabase
         .from('contacts')
         .delete()
         .eq('id', id);
 
       if (error) throw error;
+
+      // Disparar webhook contact.deleted
+      await dispatchWebhookFromClient({
+        event: 'contact.deleted',
+        entity: 'contact',
+        data: contact,
+        tenant_id: contact.tenant_id,
+        user_id: user.id,
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contacts'] });
