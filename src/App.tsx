@@ -17,8 +17,10 @@ import Products from "./pages/Products";
 import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
 import Settings from "./pages/Settings";
+import SuperAdmin from "./pages/SuperAdmin";
 import ApiDocumentation from "./pages/ApiDocumentation";
 import NotFound from "./pages/NotFound";
+import { SuperAdminGuard } from "./components/SuperAdminGuard";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +45,7 @@ const App = () => (
                 <Route path="tasks" element={<Tasks />} />
                 <Route path="api-docs" element={<ApiDocumentation />} />
                 <Route path="settings" element={<Settings />} />
+                <Route path="superadmin" element={<SuperAdminGuard><SuperAdmin /></SuperAdminGuard>} />
               </Route>
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
