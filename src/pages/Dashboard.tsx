@@ -12,18 +12,21 @@ import {
   Bell,
   Search,
   BookOpen,
+  Shield,
 } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import BrandLogo from "@/components/BrandLogo";
 
 const Dashboard = () => {
   const location = useLocation();
   const { signOut } = useAuth();
+  const { isSuperAdmin } = useUserRole();
 
-  const menuItems = [
+  const baseMenuItems = [
     { icon: LayoutDashboard, label: "Dashboard", path: "/dashboard" },
     { icon: Users, label: "Contatos", path: "/dashboard/contacts" },
     { icon: Package, label: "Produtos", path: "/dashboard/products" },
@@ -32,6 +35,10 @@ const Dashboard = () => {
     { icon: CheckSquare, label: "Tarefas", path: "/dashboard/tasks" },
     { icon: Settings, label: "Configurações", path: "/dashboard/settings" },
   ];
+
+  const menuItems = isSuperAdmin 
+    ? [...baseMenuItems, { icon: Shield, label: "Super Admin", path: "/dashboard/superadmin" }]
+    : baseMenuItems;
 
   return (
     <div className="flex h-screen bg-background">
