@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useApiConfig } from "@/hooks/useApiConfig";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 export function WebhookDebug() {
+  const { apiBaseUrl } = useApiConfig();
   const [checking, setChecking] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
@@ -18,7 +20,7 @@ export function WebhookDebug() {
     try {
       // Try GET request to health check endpoint
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/dispatch-webhook`,
+        `${apiBaseUrl}/functions/v1/dispatch-webhook`,
         {
           method: 'GET',
           headers: {

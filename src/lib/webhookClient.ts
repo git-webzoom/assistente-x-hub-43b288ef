@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { getApiBaseUrl } from "@/hooks/useApiConfig";
 
 interface WebhookClientPayload {
   event: string;
@@ -10,6 +11,7 @@ interface WebhookClientPayload {
 }
 
 export async function dispatchWebhookFromClient(payload: WebhookClientPayload) {
+  const apiBaseUrl = await getApiBaseUrl();
   try {
     const body = {
       event: payload.event,
@@ -21,6 +23,7 @@ export async function dispatchWebhookFromClient(payload: WebhookClientPayload) {
     };
 
     console.log("Dispatching webhook from client:", body);
+    console.log("Using API Base URL:", apiBaseUrl);
 
     const { data, error } = await supabase.functions.invoke("dispatch-webhook-v2", {
       body,
