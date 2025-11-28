@@ -6,12 +6,19 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { useTenants } from '@/hooks/useTenants';
 import { useAuditLog } from '@/hooks/useAuditLog';
-import { Shield, Settings, Users, History } from 'lucide-react';
+import { useApiConfig } from '@/hooks/useApiConfig';
+import { SearchInput } from '@/components/SearchInput';
+import { TenantMenuSettings } from '@/components/TenantMenuSettings';
+import { JsonEditor } from '@/components/JsonEditor';
+import { Shield, Settings, Users, History, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from '@/hooks/use-toast';
 
 export default function SuperAdmin() {
   return (
@@ -60,7 +67,10 @@ export default function SuperAdmin() {
 
 function SystemSettingsSection() {
   const { settings, isLoading, updateSetting } = useSystemSettings();
+  const { invalidateApiConfig } = useApiConfig();
   const [editedValues, setEditedValues] = useState<Record<string, string>>({});
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [connectionResult, setConnectionResult] = useState<{ success: boolean; message: string } | null>(null);
 
   const handleSave = (key: string) => {
     const value = editedValues[key];
@@ -71,11 +81,59 @@ function SystemSettingsSection() {
         delete newValues[key];
         return newValues;
       });
+      
+      // Invalidar cache da API config se for a URL base
+      if (key === 'API_BASE_URL') {
+        invalidateApiConfig();
+      }
+    }
+  };
+
+  const testConnection = async () => {
+    const apiUrl = editedValues['API_BASE_URL'] || settings.find(s => s.key === 'API_BASE_URL')?.value;
+    
+    if (!apiUrl) {
+      toast({
+        title: 'Erro',
+        description: 'URL base não configurada',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setTestingConnection(true);
+    setConnectionResult(null);
+
+    try {
+      const response = await fetch(`${apiUrl}/rest/v1/`, {
+        method: 'HEAD',
+        headers: {
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+        },
+      });
+
+      if (response.ok) {
+        setConnectionResult({ success: true, message: 'Conexão bem-sucedida!' });
+      } else {
+        setConnectionResult({ success: false, message: `Erro: HTTP ${response.status}` });
+      }
+    } catch (err) {
+      setConnectionResult({ 
+        success: false, 
+        message: err instanceof Error ? err.message : 'Erro ao conectar' 
+      });
+    } finally {
+      setTestingConnection(false);
     }
   };
 
   if (isLoading) {
-    return <div>Carregando configurações...</div>;
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
   }
 
   return (
@@ -101,6 +159,19 @@ function SystemSettingsSection() {
                   onChange={(e) => setEditedValues(prev => ({ ...prev, [setting.key]: e.target.value }))}
                   className="flex-1"
                 />
+                {setting.key === 'API_BASE_URL' && (
+                  <Button
+                    variant="outline"
+                    onClick={testConnection}
+                    disabled={testingConnection}
+                  >
+                    {testingConnection ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      'Testar'
+                    )}
+                  </Button>
+                )}
                 <Button
                   onClick={() => handleSave(setting.key)}
                   disabled={editedValues[setting.key] === undefined}
@@ -110,6 +181,17 @@ function SystemSettingsSection() {
               </div>
             </div>
           ))}
+
+          {connectionResult && (
+            <Alert variant={connectionResult.success ? 'default' : 'destructive'}>
+              {connectionResult.success ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
+              <AlertDescription>{connectionResult.message}</AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -119,9 +201,15 @@ function SystemSettingsSection() {
 function TenantsSection() {
   const { tenants, isLoading, updateTenant } = useTenants();
   const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   if (isLoading) {
-    return <div>Carregando tenants...</div>;
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-32 w-full" />
+        <Skeleton className="h-32 w-full" />
+      </div>
+    );
   }
 
   if (selectedTenant) {
@@ -131,18 +219,29 @@ function TenantsSection() {
     }
   }
 
+  const filteredTenants = tenants.filter(tenant =>
+    tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tenant.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   return (
     <div className="space-y-4">
+      <SearchInput
+        value={searchTerm}
+        onChange={setSearchTerm}
+        placeholder="Buscar por nome ou ID do tenant..."
+      />
+
       <Card>
         <CardHeader>
           <CardTitle>Gerenciamento de Tenants</CardTitle>
           <CardDescription>
-            Lista de todos os clientes/organizações do sistema
+            {filteredTenants.length} tenant(s) encontrado(s)
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {tenants.map((tenant) => (
+            {filteredTenants.map((tenant) => (
               <div
                 key={tenant.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -177,6 +276,10 @@ function TenantDetail({ tenant, onBack }: { tenant: any; onBack: () => void }) {
   const { updateTenant } = useTenants();
   const { logs } = useAuditLog(tenant.id);
   const [isActive, setIsActive] = useState(tenant.is_active);
+  const [name, setName] = useState(tenant.name);
+  const [menuSettings, setMenuSettings] = useState(tenant.menu_settings || {});
+  const [customConfig, setCustomConfig] = useState(tenant.custom_config || {});
+  const [saving, setSaving] = useState(false);
 
   const handleToggleActive = () => {
     const newValue = !isActive;
@@ -184,18 +287,54 @@ function TenantDetail({ tenant, onBack }: { tenant: any; onBack: () => void }) {
     updateTenant({ id: tenant.id, is_active: newValue });
   };
 
+  const handleSaveName = () => {
+    if (name.trim() && name !== tenant.name) {
+      updateTenant({ id: tenant.id, name: name.trim() });
+    }
+  };
+
+  const handleSaveMenuSettings = () => {
+    setSaving(true);
+    updateTenant({ id: tenant.id, menu_settings: menuSettings });
+    setTimeout(() => setSaving(false), 500);
+  };
+
+  const handleSaveCustomConfig = () => {
+    setSaving(true);
+    updateTenant({ id: tenant.id, custom_config: customConfig });
+    setTimeout(() => setSaving(false), 500);
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Button variant="outline" onClick={onBack}>
         ← Voltar
       </Button>
 
       <Card>
         <CardHeader>
-          <CardTitle>{tenant.name}</CardTitle>
-          <CardDescription>Gerenciamento individual do tenant</CardDescription>
+          <CardTitle>Informações Básicas</CardTitle>
+          <CardDescription>Dados principais do tenant</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="tenant-name">Nome do Tenant</Label>
+            <div className="flex gap-2">
+              <Input
+                id="tenant-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="flex-1"
+              />
+              <Button
+                onClick={handleSaveName}
+                disabled={!name.trim() || name === tenant.name}
+              >
+                Salvar
+              </Button>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
             <div>
               <Label htmlFor="active">Status do Tenant</Label>
@@ -211,20 +350,43 @@ function TenantDetail({ tenant, onBack }: { tenant: any; onBack: () => void }) {
           </div>
 
           <div className="space-y-2">
-            <Label>Configurações Personalizadas</Label>
-            <pre className="p-4 bg-muted rounded-lg text-sm overflow-auto">
-              {JSON.stringify(tenant.custom_config || {}, null, 2)}
-            </pre>
+            <Label>ID do Tenant</Label>
+            <Input value={tenant.id} disabled className="font-mono text-sm" />
           </div>
 
           <div className="space-y-2">
-            <Label>Configurações de Menu</Label>
-            <pre className="p-4 bg-muted rounded-lg text-sm overflow-auto">
-              {JSON.stringify(tenant.menu_settings || {}, null, 2)}
-            </pre>
+            <Label>Criado em</Label>
+            <Input
+              value={format(new Date(tenant.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              disabled
+            />
           </div>
         </CardContent>
       </Card>
+
+      <div className="space-y-4">
+        <TenantMenuSettings
+          value={menuSettings}
+          onChange={setMenuSettings}
+        />
+        <Button onClick={handleSaveMenuSettings} disabled={saving} className="w-full">
+          {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+          Salvar Configurações de Menu
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        <JsonEditor
+          value={customConfig}
+          onChange={setCustomConfig}
+          title="Configurações Personalizadas"
+          description="Configurações customizadas em formato JSON para este tenant"
+        />
+        <Button onClick={handleSaveCustomConfig} disabled={saving} className="w-full">
+          {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+          Salvar Configurações Personalizadas
+        </Button>
+      </div>
 
       <Card>
         <CardHeader>
