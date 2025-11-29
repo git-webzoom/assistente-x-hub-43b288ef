@@ -185,6 +185,7 @@ export const useProducts = () => {
     products,
     isLoading,
     createProduct: createProduct.mutate,
+    createProductAsync: createProduct.mutateAsync,
     updateProduct: updateProduct.mutate,
     deleteProduct: deleteProduct.mutate,
   };

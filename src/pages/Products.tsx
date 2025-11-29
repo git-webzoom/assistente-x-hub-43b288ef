@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Pencil, Trash2, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,14 +37,21 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CustomFieldsSection } from '@/components/CustomFieldsSection';
 import { SearchInput } from '@/components/SearchInput';
 import { DataTableWrapper } from '@/components/DataTableWrapper';
+import { ProductImageUpload, type PendingImage } from '@/components/ProductImageUpload';
+import { useProductImages } from '@/hooks/useProductImages';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Products() {
-  const { products, isLoading, createProduct, updateProduct, deleteProduct } = useProducts();
+  const { products, isLoading, createProduct, createProductAsync, updateProduct, deleteProduct } = useProducts();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
+  const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { uploadImages } = useProductImages();
 
   const [formData, setFormData] = useState({
     name: '',
@@ -89,27 +96,65 @@ export default function Products() {
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingProduct(null);
+    setPendingImages([]);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const data = {
-      ...formData,
-      price: Number(formData.price),
-      cost: formData.cost ? Number(formData.cost) : null,
-      stock: formData.stock ? Number(formData.stock) : null,
-      sku: formData.sku || null,
-      category: formData.category || null,
-      description: formData.description || null,
+  // Limpar previews ao desmontar
+  useEffect(() => {
+    return () => {
+      pendingImages.forEach((img) => URL.revokeObjectURL(img.preview));
     };
+  }, [pendingImages]);
 
-    if (editingProduct) {
-      updateProduct({ id: editingProduct.id, ...data });
-    } else {
-      createProduct(data);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      const data = {
+        ...formData,
+        price: Number(formData.price),
+        cost: formData.cost ? Number(formData.cost) : null,
+        stock: formData.stock ? Number(formData.stock) : null,
+        sku: formData.sku || null,
+        category: formData.category || null,
+        description: formData.description || null,
+      };
+
+      let productId: string;
+
+      if (editingProduct) {
+        updateProduct({ id: editingProduct.id, ...data });
+        productId = editingProduct.id;
+      } else {
+        // Criar produto e aguardar resposta
+        const newProduct = await createProductAsync(data);
+        productId = newProduct.id;
+      }
+
+      // Upload de imagens pendentes (apenas se houver imagens comprimidas)
+      const imagesToUpload = pendingImages.filter(
+        (img) => img.compressed && !img.isCompressing
+      );
+
+      if (imagesToUpload.length > 0 && productId) {
+        const uploadPayloads = imagesToUpload.map((img, index) => ({
+          productId,
+          file: new File([img.compressed!], img.file.name, { type: img.compressed!.type }),
+          altText: img.altText,
+          isPrimary: img.isPrimary,
+          displayOrder: index,
+        }));
+
+        await uploadImages(uploadPayloads);
+      }
+
+      handleCloseDialog();
+    } catch (error) {
+      console.error('Erro ao salvar produto:', error);
+    } finally {
+      setIsSubmitting(false);
     }
-    handleCloseDialog();
   };
 
   const handleDelete = (id: string) => {
@@ -276,8 +321,15 @@ export default function Products() {
           </DialogDescription>
         </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto pr-4">
+        <div className="flex-1 overflow-y-auto pr-4">
+          <Tabs defaultValue="info" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="info">Informações</TabsTrigger>
+              <TabsTrigger value="images">Imagens</TabsTrigger>
+            </TabsList>
+
             <form id="product-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
+              <TabsContent value="info" className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="name">Nome do Produto *</Label>
@@ -372,15 +424,25 @@ export default function Products() {
               entityType="product"
               entityId={editingProduct?.id}
             />
+              </TabsContent>
+
+              <TabsContent value="images" className="space-y-4">
+                <ProductImageUpload
+                  pendingImages={pendingImages}
+                  onImagesChange={setPendingImages}
+                  maxImages={10}
+                />
+              </TabsContent>
           </form>
+          </Tabs>
         </div>
 
         <DialogFooter className="flex-shrink-0">
-          <Button type="button" variant="outline" onClick={handleCloseDialog}>
+          <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button type="submit" form="product-form">
-            {editingProduct ? 'Salvar Alterações' : 'Criar Produto'}
+          <Button type="submit" form="product-form" disabled={isSubmitting}>
+            {isSubmitting ? 'Salvando...' : editingProduct ? 'Salvar Alterações' : 'Criar Produto'}
           </Button>
         </DialogFooter>
       </DialogContent>
