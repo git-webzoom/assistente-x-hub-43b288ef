@@ -36,7 +36,7 @@ const ApiDocumentation = () => {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const baseUrl = `${apiBaseUrl}/functions/v1/api-v1`;
+  const baseUrl = apiBaseUrl;
 
   const endpoints = [
     { name: "Contatos", path: "/contacts", icon: Database, color: "bg-blue-500" },
