@@ -37,6 +37,31 @@ export const useProductVariationStock = (productId?: string) => {
     enabled: !!productId,
   });
 
+  // Função auxiliar para recalcular e atualizar o estoque total do produto
+  const updateProductTotalStock = async (productId: string) => {
+    const { data, error } = await supabase
+      .from('product_custom_field_stock')
+      .select('quantity')
+      .eq('product_id', productId);
+
+    if (error) throw error;
+
+    const totalStock = (data ?? []).reduce(
+      (sum, row: { quantity: number | null }) => sum + (row.quantity ?? 0),
+      0
+    );
+
+    const { error: updateError } = await supabase
+      .from('products')
+      .update({
+        stock: totalStock,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', productId);
+
+    if (updateError) throw updateError;
+  };
+
   // Upsert (criar ou atualizar) estoque de variação
   const upsertVariationStock = useMutation({
     mutationFn: async ({
@@ -80,6 +105,10 @@ export const useProductVariationStock = (productId?: string) => {
         .single();
 
       if (error) throw error;
+
+      // Recalcular e atualizar o estoque total do produto
+      await updateProductTotalStock(productId);
+
       return data;
     },
     onSuccess: () => {
@@ -108,6 +137,11 @@ export const useProductVariationStock = (productId?: string) => {
         .eq('id', id);
 
       if (error) throw error;
+
+      // Se tivermos o productId no hook, atualiza o estoque total
+      if (productId) {
+        await updateProductTotalStock(productId);
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['product-variation-stock', productId] });
