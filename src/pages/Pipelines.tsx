@@ -285,7 +285,6 @@ const Pipelines = () => {
         title: data.title,
         value: data.value,
         description: data.description,
-        tags: data.tags,
       });
       setEditingCard(null);
     } else {

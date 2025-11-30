@@ -63,7 +63,6 @@ export const useCards = (pipelineId?: string) => {
       value,
       position,
       description,
-      tags,
     }: {
       pipelineId: string;
       stageId: string;
@@ -71,7 +70,6 @@ export const useCards = (pipelineId?: string) => {
       value: number;
       position: number;
       description?: string;
-      tags?: string[];
     }) => {
       if (!user?.id) throw new Error("User not authenticated");
 
@@ -95,7 +93,6 @@ export const useCards = (pipelineId?: string) => {
           value,
           position,
           description: description || null,
-          tags: tags || null,
           created_by: user.id,
         })
         .select()
@@ -138,7 +135,6 @@ export const useCards = (pipelineId?: string) => {
       title,
       value,
       description,
-      tags,
     }: {
       id: string;
       stageId?: string;
@@ -146,7 +142,6 @@ export const useCards = (pipelineId?: string) => {
       title?: string;
       value?: number;
       description?: string;
-      tags?: string[];
     }) => {
       if (!user?.id) throw new Error("User not authenticated");
 
@@ -165,7 +160,6 @@ export const useCards = (pipelineId?: string) => {
       if (title) updates.title = title;
       if (value !== undefined) updates.value = value;
       if (description !== undefined) updates.description = description;
-      if (tags !== undefined) updates.tags = tags;
 
       const { data: after, error } = await supabase
         .from("cards")
@@ -182,8 +176,7 @@ export const useCards = (pipelineId?: string) => {
       const hasSignificantChange =
         (title !== undefined && title !== before.title) ||
         (value !== undefined && value !== before.value) ||
-        (description !== undefined && description !== before.description) ||
-        (tags !== undefined && JSON.stringify(tags) !== JSON.stringify(before.tags));
+        (description !== undefined && description !== before.description);
 
       // card.moved: stage mudou
       const stageMoved = stageId && before.stage_id !== stageId;

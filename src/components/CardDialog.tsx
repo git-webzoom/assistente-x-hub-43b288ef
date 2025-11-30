@@ -13,18 +13,19 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CustomFieldsSection } from "@/components/CustomFieldsSection";
+import { TagSelector } from "@/components/TagSelector";
+import { useCardTags } from "@/hooks/useCardTags";
 
 interface CardDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: { title: string; value: number; description?: string; tags?: string[] }) => void;
+  onSubmit: (data: { title: string; value: number; description?: string }) => void;
   cardId?: string;
   existingCard?: {
     id: string;
     title: string;
     value: number;
     description?: string;
-    tags?: string[];
   };
 }
 
@@ -35,10 +36,11 @@ export const CardDialog = ({
   cardId,
   existingCard,
 }: CardDialogProps) => {
+  const { cardTags, setCardTags } = useCardTags(cardId);
   const [title, setTitle] = useState("");
   const [value, setValue] = useState("");
   const [description, setDescription] = useState("");
-  const [tags, setTags] = useState("");
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   // Populate form when editing
   useEffect(() => {
@@ -46,28 +48,36 @@ export const CardDialog = ({
       setTitle(existingCard.title);
       setValue(existingCard.value.toString());
       setDescription(existingCard.description || "");
-      setTags(existingCard.tags?.join(", ") || "");
+      setSelectedTagIds(cardTags.map(t => t.id));
     } else {
       setTitle("");
       setValue("");
       setDescription("");
-      setTags("");
+      setSelectedTagIds([]);
     }
-  }, [existingCard]);
+  }, [existingCard, cardTags]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim() && value) {
       onSubmit({
         title: title.trim(),
         value: parseFloat(value),
         description: description.trim() || undefined,
-        tags: tags.trim() ? tags.split(",").map(t => t.trim()) : undefined,
       });
+      
+      // Update tags after card is saved
+      if (cardId) {
+        await setCardTags.mutateAsync({
+          cardId: cardId,
+          tagIds: selectedTagIds,
+        });
+      }
+      
       setTitle("");
       setValue("");
       setDescription("");
-      setTags("");
+      setSelectedTagIds([]);
       onOpenChange(false);
     }
   };
@@ -117,12 +127,10 @@ export const CardDialog = ({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="tags">Tags (separadas por vírgula)</Label>
-                <Input
-                  id="tags"
-                  placeholder="Ex: quente, empresa, urgente"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
+                <Label>Tags</Label>
+                <TagSelector
+                  selectedTagIds={selectedTagIds}
+                  onChange={setSelectedTagIds}
                 />
               </div>
               
