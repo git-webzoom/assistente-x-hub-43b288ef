@@ -83,7 +83,8 @@ export const useProductVariationStock = (productId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-variation-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['product-variation-stock', productId] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: 'Estoque atualizado',
         description: 'O estoque da variação foi atualizado com sucesso.',
@@ -109,7 +110,8 @@ export const useProductVariationStock = (productId?: string) => {
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product-variation-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['product-variation-stock', productId] });
+      queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
         title: 'Estoque removido',
         description: 'O estoque da variação foi removido com sucesso.',
