@@ -119,15 +119,21 @@ export default function Products() {
     setIsSubmitting(true);
     
     try {
-      const data = {
+      const hasVariationStock = editingProduct && variationStocks && variationStocks.length > 0;
+
+      const data: any = {
         ...formData,
         price: Number(formData.price),
         cost: formData.cost ? Number(formData.cost) : null,
-        stock: formData.stock ? Number(formData.stock) : null,
         sku: formData.sku || null,
         category: formData.category || null,
         description: formData.description || null,
       };
+
+      // Apenas permitir edição manual de estoque quando não há controle por variação
+      if (!hasVariationStock) {
+        data.stock = formData.stock ? Number(formData.stock) : null;
+      }
 
       let productId: string;
 
