@@ -137,6 +137,8 @@ export default function Products() {
       // Apenas permitir edição manual de estoque quando não há controle por variação
       if (!hasStockControlField) {
         data.stock = formData.stock ? Number(formData.stock) : null;
+      } else {
+        delete data.stock;
       }
 
       let productId: string;
