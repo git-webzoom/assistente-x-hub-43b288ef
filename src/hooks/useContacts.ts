@@ -56,7 +56,7 @@ export const useContacts = (searchQuery?: string) => {
   });
 
   const createContact = useMutation({
-    mutationFn: async (newContact: Omit<Contact, 'id' | 'created_at' | 'updated_at' | 'tenant_id'>) => {
+    mutationFn: async (newContact: Omit<Contact, 'id' | 'created_at' | 'updated_at' | 'tenant_id' | 'tags'>) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { data: userData } = await supabase
@@ -67,9 +67,11 @@ export const useContacts = (searchQuery?: string) => {
 
       if (!userData?.tenant_id) throw new Error('Tenant not found');
 
+      const { tags, ...contactData } = newContact as any;
+
       const { data, error } = await supabase
         .from('contacts')
-        .insert([{ ...newContact, tenant_id: userData.tenant_id }])
+        .insert([{ ...contactData, tenant_id: userData.tenant_id }])
         .select()
         .single();
 

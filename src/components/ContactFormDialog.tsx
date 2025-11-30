@@ -9,6 +9,8 @@ import { Contact } from '@/hooks/useContacts';
 import { z } from 'zod';
 import { Loader2 } from 'lucide-react';
 import { CustomFieldsSection } from './CustomFieldsSection';
+import { TagSelector } from './TagSelector';
+import { useContactTags } from '@/hooks/useContactTags';
 
 const contactSchema = z.object({
   name: z.string().trim().min(1, 'Nome é obrigatório').max(100, 'Nome muito longo'),
@@ -16,7 +18,6 @@ const contactSchema = z.object({
   phone: z.string().trim().max(20, 'Telefone muito longo').optional().or(z.literal('')),
   company: z.string().trim().max(100, 'Nome da empresa muito longo').optional().or(z.literal('')),
   position: z.string().trim().max(100, 'Cargo muito longo').optional().or(z.literal('')),
-  tags: z.string().optional(),
   notes: z.string().trim().max(1000, 'Notas muito longas').optional().or(z.literal('')),
 });
 
@@ -37,15 +38,16 @@ export const ContactFormDialog = ({
   onSubmit,
   isSubmitting,
 }: ContactFormDialogProps) => {
+  const { contactTags, setContactTags } = useContactTags(contact?.id);
   const [formData, setFormData] = useState<ContactFormData>({
     name: '',
     email: '',
     phone: '',
     company: '',
     position: '',
-    tags: '',
     notes: '',
   });
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
@@ -56,9 +58,9 @@ export const ContactFormDialog = ({
         phone: contact.phone || '',
         company: contact.company || '',
         position: contact.position || '',
-        tags: contact.tags?.join(', ') || '',
         notes: contact.notes || '',
       });
+      setSelectedTagIds(contactTags.map(t => t.id));
     } else {
       setFormData({
         name: '',
@@ -66,12 +68,12 @@ export const ContactFormDialog = ({
         phone: '',
         company: '',
         position: '',
-        tags: '',
         notes: '',
       });
+      setSelectedTagIds([]);
     }
     setErrors({});
-  }, [contact, open]);
+  }, [contact, open, contactTags]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,13 +88,19 @@ export const ContactFormDialog = ({
         phone: validatedData.phone || null,
         company: validatedData.company || null,
         position: validatedData.position || null,
-        tags: validatedData.tags 
-          ? validatedData.tags.split(',').map(tag => tag.trim()).filter(Boolean)
-          : null,
         notes: validatedData.notes || null,
       };
 
       await onSubmit(submitData);
+      
+      // Update tags after contact is saved
+      if (contact?.id) {
+        await setContactTags.mutateAsync({
+          contactId: contact.id,
+          tagIds: selectedTagIds,
+        });
+      }
+      
       onOpenChange(false);
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -184,15 +192,11 @@ export const ContactFormDialog = ({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="tags">Tags</Label>
-              <Input
-                id="tags"
-                value={formData.tags}
-                onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                placeholder="cliente, lead, vip (separadas por vírgula)"
-                disabled={isSubmitting}
+              <Label>Tags</Label>
+              <TagSelector
+                selectedTagIds={selectedTagIds}
+                onChange={setSelectedTagIds}
               />
-              {errors.tags && <p className="text-sm text-destructive">{errors.tags}</p>}
             </div>
 
             <div className="space-y-2">
