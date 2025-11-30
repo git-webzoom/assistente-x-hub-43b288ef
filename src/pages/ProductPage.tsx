@@ -115,30 +115,23 @@ export default function ProductPage() {
                   <div className="space-y-3">
                     {visibleCustomFields.map((field) => (
                       <div key={field.id}>
-                        {/* If field has variation stocks, show them */}
+                        {/* If field has variation stocks, show only available ones */}
                         {field.variationStocks && field.variationStocks.length > 0 ? (
                           <div className="space-y-2">
                             <span className="text-gray-600 font-medium text-sm">
                               {field.field_label}:
                             </span>
-                            <div className="grid grid-cols-2 gap-2 ml-2">
-                              {field.variationStocks.map((variation) => (
-                                <div
-                                  key={`${variation.custom_field_id}-${variation.option_value}`}
-                                  className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-md border border-gray-200"
-                                >
-                                  <span className="text-sm text-gray-900">
+                            <div className="flex flex-wrap gap-2 ml-2">
+                              {field.variationStocks
+                                .filter((variation) => variation.quantity > 0)
+                                .map((variation) => (
+                                  <div
+                                    key={`${variation.custom_field_id}-${variation.option_value}`}
+                                    className="px-3 py-1.5 bg-gray-50 rounded-md border border-gray-200 text-sm text-gray-900"
+                                  >
                                     {variation.option_value}
-                                  </span>
-                                  <span className={`text-sm font-medium ${
-                                    variation.quantity > 0 ? 'text-green-600' : 'text-red-600'
-                                  }`}>
-                                    {variation.quantity > 0 
-                                      ? `${variation.quantity} un` 
-                                      : 'Sem estoque'}
-                                  </span>
-                                </div>
-                              ))}
+                                  </div>
+                                ))}
                             </div>
                           </div>
                         ) : (
