@@ -41,12 +41,15 @@ import { ProductImageUpload, type PendingImage } from '@/components/ProductImage
 import { useProductImages } from '@/hooks/useProductImages';
 import { useToast } from '@/hooks/use-toast';
 import ProductVariationStockManager from '@/components/ProductVariationStockManager';
+import { useProductsWithVariationStock } from '@/hooks/useProductsWithVariationStock';
+import { useProductVariationStock } from '@/hooks/useProductVariationStock';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Products() {
   const { toast } = useToast();
   const { products, isLoading, createProduct, createProductAsync, updateProduct, deleteProduct } = useProducts();
+  const { getProductStock } = useProductsWithVariationStock();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -57,6 +60,7 @@ export default function Products() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { images: existingImages, uploadImages, deleteImage, setPrimaryImage } = useProductImages(editingProduct?.id);
+  const { variationStocks } = useProductVariationStock(editingProduct?.id);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -279,13 +283,24 @@ export default function Products() {
                       : '-'}
                   </TableCell>
                   <TableCell>
-                    {product.stock !== null ? (
-                      <Badge variant={product.stock > 10 ? 'default' : 'destructive'}>
-                        {product.stock} un
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
+                    {(() => {
+                      const variationStock = getProductStock(product.id);
+                      if (variationStock?.has_variations) {
+                        const total = variationStock.total_variation_stock;
+                        return (
+                          <Badge variant={total > 10 ? 'default' : 'destructive'}>
+                            {total} un
+                          </Badge>
+                        );
+                      }
+                      return product.stock !== null ? (
+                        <Badge variant={product.stock > 10 ? 'default' : 'destructive'}>
+                          {product.stock} un
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell>
                     <Badge variant={product.is_active ? 'default' : 'secondary'}>
@@ -456,16 +471,18 @@ export default function Products() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="stock">Estoque</Label>
-                <Input
-                  id="stock"
-                  type="number"
-                  min="0"
-                  value={formData.stock}
-                  onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
-                />
-              </div>
+              {(!editingProduct || variationStocks.length === 0) && (
+                <div className="space-y-2">
+                  <Label htmlFor="stock">Estoque</Label>
+                  <Input
+                    id="stock"
+                    type="number"
+                    min="0"
+                    value={formData.stock}
+                    onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
+                  />
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="is_active">Status</Label>
