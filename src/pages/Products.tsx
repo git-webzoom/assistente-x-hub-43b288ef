@@ -41,7 +41,7 @@ import { ProductImageUpload, type PendingImage } from '@/components/ProductImage
 import { useProductImages } from '@/hooks/useProductImages';
 import { useToast } from '@/hooks/use-toast';
 import ProductVariationStockManager from '@/components/ProductVariationStockManager';
-import { useProductVariationStock } from '@/hooks/useProductVariationStock';
+import { useCustomFields } from '@/hooks/useCustomFields';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -58,7 +58,7 @@ export default function Products() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const { images: existingImages, uploadImages, deleteImage, setPrimaryImage } = useProductImages(editingProduct?.id);
-  const { variationStocks } = useProductVariationStock(editingProduct?.id);
+  const { customFields } = useCustomFields('product', editingProduct?.id ?? undefined);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -119,7 +119,11 @@ export default function Products() {
     setIsSubmitting(true);
     
     try {
-      const hasVariationStock = editingProduct && variationStocks && variationStocks.length > 0;
+      const hasStockControlField = !!editingProduct && (
+        customFields === undefined
+          ? true
+          : customFields.some(field => field.has_stock_control)
+      );
 
       const data: any = {
         ...formData,
@@ -131,7 +135,7 @@ export default function Products() {
       };
 
       // Apenas permitir edição manual de estoque quando não há controle por variação
-      if (!hasVariationStock) {
+      if (!hasStockControlField) {
         data.stock = formData.stock ? Number(formData.stock) : null;
       }
 
@@ -464,7 +468,7 @@ export default function Products() {
                 />
               </div>
 
-              {(!editingProduct || variationStocks.length === 0) && (
+              {(!editingProduct || customFields === undefined || !customFields.some(field => field.has_stock_control)) && (
                 <div className="space-y-2">
                   <Label htmlFor="stock">Estoque</Label>
                   <Input
