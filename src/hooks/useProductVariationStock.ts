@@ -53,19 +53,19 @@ export const useProductVariationStock = (productId?: string) => {
       if (!user) throw new Error('Usuário não autenticado');
 
       // Buscar tenant_id do usuário
-      const { data: profile } = await supabase
-        .from('profiles')
+      const { data: userData } = await supabase
+        .from('users')
         .select('tenant_id')
         .eq('id', user.id)
         .single();
 
-      if (!profile?.tenant_id) throw new Error('Tenant não encontrado');
+      if (!userData?.tenant_id) throw new Error('Tenant não encontrado');
 
       const { data, error } = await supabase
         .from('product_custom_field_stock')
         .upsert(
           {
-            tenant_id: profile.tenant_id,
+            tenant_id: userData.tenant_id,
             product_id: productId,
             custom_field_id: customFieldId,
             option_value: optionValue,
