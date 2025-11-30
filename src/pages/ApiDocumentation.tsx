@@ -19,9 +19,11 @@ import {
   Shield
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useApiConfig } from "@/hooks/useApiConfig";
 
 const ApiDocumentation = () => {
   const { toast } = useToast();
+  const { apiBaseUrl, isLoading } = useApiConfig();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const copyToClipboard = (text: string, label: string) => {
@@ -34,7 +36,7 @@ const ApiDocumentation = () => {
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const baseUrl = "https://onhnxxweldxjzhoaiwgq.supabase.co/functions/v1/api-v1";
+  const baseUrl = `${apiBaseUrl}/functions/v1/api-v1`;
 
   const endpoints = [
     { name: "Contatos", path: "/contacts", icon: Database, color: "bg-blue-500" },
