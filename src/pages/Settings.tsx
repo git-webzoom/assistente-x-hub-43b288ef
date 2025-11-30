@@ -3,8 +3,13 @@ import CustomFieldSettings from './settings/CustomFieldSettings';
 import WebhookSettings from './settings/WebhookSettings';
 import ApiKeySettings from './settings/ApiKeySettings';
 import TagSettings from './settings/TagSettings';
+import UserSettings from './settings/UserSettings';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export default function Settings() {
+  const { role } = useUserRole();
+  const isAdmin = role === 'admin' || role === 'superadmin';
+
   return (
     <div className="space-y-6">
       <div>
@@ -20,6 +25,7 @@ export default function Settings() {
           <TabsTrigger value="tags">Tags</TabsTrigger>
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           <TabsTrigger value="api">API</TabsTrigger>
+          {isAdmin && <TabsTrigger value="users">Usuários</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="custom-fields">
@@ -37,6 +43,12 @@ export default function Settings() {
         <TabsContent value="api">
           <ApiKeySettings />
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="users">
+            <UserSettings />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

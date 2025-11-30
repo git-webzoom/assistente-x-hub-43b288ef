@@ -22,6 +22,8 @@ import SuperAdmin from "./pages/SuperAdmin";
 import ApiDocumentation from "./pages/ApiDocumentation";
 import NotFound from "./pages/NotFound";
 import { SuperAdminGuard } from "./components/SuperAdminGuard";
+import { TenantMenuGuard } from "./components/TenantMenuGuard";
+import { EntityPermissionGuard } from "./components/EntityPermissionGuard";
 
 const queryClient = new QueryClient();
 
@@ -40,11 +42,41 @@ const App = () => (
               <Route path="/p/:slug" element={<ProductPage />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>}>
                 <Route index element={<DashboardHome />} />
-                <Route path="pipelines" element={<Pipelines />} />
-                <Route path="contacts" element={<Contacts />} />
-                <Route path="products" element={<Products />} />
-                <Route path="calendar" element={<Calendar />} />
-                <Route path="tasks" element={<Tasks />} />
+                <Route path="pipelines" element={
+                  <TenantMenuGuard menuKey="pipelines">
+                    <EntityPermissionGuard entity="pipelines" action="view">
+                      <Pipelines />
+                    </EntityPermissionGuard>
+                  </TenantMenuGuard>
+                } />
+                <Route path="contacts" element={
+                  <TenantMenuGuard menuKey="contacts">
+                    <EntityPermissionGuard entity="contacts" action="view">
+                      <Contacts />
+                    </EntityPermissionGuard>
+                  </TenantMenuGuard>
+                } />
+                <Route path="products" element={
+                  <TenantMenuGuard menuKey="products">
+                    <EntityPermissionGuard entity="products" action="view">
+                      <Products />
+                    </EntityPermissionGuard>
+                  </TenantMenuGuard>
+                } />
+                <Route path="calendar" element={
+                  <TenantMenuGuard menuKey="calendar">
+                    <EntityPermissionGuard entity="calendar" action="view">
+                      <Calendar />
+                    </EntityPermissionGuard>
+                  </TenantMenuGuard>
+                } />
+                <Route path="tasks" element={
+                  <TenantMenuGuard menuKey="tasks">
+                    <EntityPermissionGuard entity="tasks" action="view">
+                      <Tasks />
+                    </EntityPermissionGuard>
+                  </TenantMenuGuard>
+                } />
                 <Route path="api-docs" element={<ApiDocumentation />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="superadmin" element={<SuperAdminGuard><SuperAdmin /></SuperAdminGuard>} />
