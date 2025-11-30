@@ -6,15 +6,17 @@ import { useEffect, useState } from 'react';
 interface CustomFieldsSectionProps {
   entityType: CustomFieldEntity;
   entityId?: string;
+  productId?: string;
   onValuesChange?: (values: Record<string, any>) => void;
 }
 
 export const CustomFieldsSection = ({
   entityType,
   entityId,
+  productId,
   onValuesChange,
 }: CustomFieldsSectionProps) => {
-  const { customFields } = useCustomFields(entityType);
+  const { customFields } = useCustomFields(entityType, productId);
   const { fieldValues, upsertFieldValue } = useCustomFieldValues(entityId);
   const [values, setValues] = useState<Record<string, any>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});

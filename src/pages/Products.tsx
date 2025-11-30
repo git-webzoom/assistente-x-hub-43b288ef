@@ -483,6 +483,7 @@ export default function Products() {
             <CustomFieldsSection
               entityType="product"
               entityId={editingProduct?.id}
+              productId={editingProduct?.id}
             />
               </TabsContent>
 

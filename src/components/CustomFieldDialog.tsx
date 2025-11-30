@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { CustomField, CustomFieldEntity, CustomFieldType } from '@/hooks/useCustomFields';
+import { useProducts } from '@/hooks/useProducts';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { X } from 'lucide-react';
 import { z } from 'zod';
 
@@ -48,6 +50,7 @@ export const CustomFieldDialog = ({
   customField,
   onSubmit,
 }: CustomFieldDialogProps) => {
+  const { products } = useProducts();
   const [formData, setFormData] = useState({
     field_label: '',
     field_name: '',
@@ -56,6 +59,8 @@ export const CustomFieldDialog = ({
     options: '',
     is_required: false,
     display_order: 0,
+    scope: 'entity' as 'entity' | 'product',
+    scope_target_id: null as string | null,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -69,6 +74,8 @@ export const CustomFieldDialog = ({
         options: customField.options?.join('\n') || '',
         is_required: customField.is_required,
         display_order: customField.display_order,
+        scope: customField.scope || 'entity',
+        scope_target_id: customField.scope_target_id || null,
       });
     } else {
       setFormData({
@@ -79,6 +86,8 @@ export const CustomFieldDialog = ({
         options: '',
         is_required: false,
         display_order: 0,
+        scope: 'entity',
+        scope_target_id: null,
       });
     }
     setErrors({});
@@ -95,6 +104,8 @@ export const CustomFieldDialog = ({
         ...validatedData,
         is_required: formData.is_required,
         display_order: formData.display_order,
+        scope: formData.scope,
+        scope_target_id: formData.scope === 'product' ? formData.scope_target_id : null,
         options:
           validatedData.field_type === 'select' && validatedData.options
             ? validatedData.options.split('\n').map((opt) => opt.trim()).filter(Boolean)
@@ -211,6 +222,58 @@ export const CustomFieldDialog = ({
                 rows={4}
               />
               {errors.options && <p className="text-sm text-destructive">{errors.options}</p>}
+            </div>
+          )}
+
+          {formData.entity_type === 'product' && (
+            <div className="space-y-3 border rounded-lg p-4 bg-muted/30">
+              <Label>Escopo do Campo</Label>
+              <RadioGroup
+                value={formData.scope}
+                onValueChange={(value: 'entity' | 'product') => {
+                  setFormData({ 
+                    ...formData, 
+                    scope: value,
+                    scope_target_id: value === 'entity' ? null : formData.scope_target_id
+                  });
+                }}
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="entity" id="scope-entity" />
+                  <Label htmlFor="scope-entity" className="cursor-pointer font-normal">
+                    Aplicar a todos os produtos
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="product" id="scope-product" />
+                  <Label htmlFor="scope-product" className="cursor-pointer font-normal">
+                    Apenas para produto específico
+                  </Label>
+                </div>
+              </RadioGroup>
+
+              {formData.scope === 'product' && (
+                <div className="space-y-2 mt-3">
+                  <Label htmlFor="scope_target_id">Selecionar Produto *</Label>
+                  <Select
+                    value={formData.scope_target_id || ''}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, scope_target_id: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolha um produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products?.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
           )}
 

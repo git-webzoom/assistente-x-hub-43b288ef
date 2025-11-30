@@ -16,14 +16,16 @@ export interface CustomField {
   is_required: boolean;
   display_order: number;
   created_at: string;
+  scope: 'entity' | 'product';
+  scope_target_id: string | null;
 }
 
-export const useCustomFields = (entityType?: CustomFieldEntity) => {
+export const useCustomFields = (entityType?: CustomFieldEntity, productId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: customFields, isLoading } = useQuery({
-    queryKey: ['custom-fields', entityType],
+    queryKey: ['custom-fields', entityType, productId],
     queryFn: async () => {
       let query = supabase
         .from('custom_fields')
@@ -32,6 +34,11 @@ export const useCustomFields = (entityType?: CustomFieldEntity) => {
 
       if (entityType) {
         query = query.eq('entity_type', entityType);
+      }
+
+      // Se for produto e tiver productId, filtrar por scope
+      if (entityType === 'product' && productId) {
+        query = query.or(`scope.eq.entity,and(scope.eq.product,scope_target_id.eq.${productId})`);
       }
 
       const { data, error } = await query;
