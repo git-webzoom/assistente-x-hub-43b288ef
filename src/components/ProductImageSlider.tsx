@@ -30,11 +30,11 @@ export const ProductImageSlider = ({ images, productName }: ProductImageSliderPr
     <div className="w-full space-y-4">
       {/* Main Image */}
       <div className="relative w-full aspect-square rounded-lg overflow-hidden bg-muted">
-                <img
-                  src={images[currentIndex].public_url}
-                  alt={images[currentIndex].alt_text || `${productName} - Imagem ${currentIndex + 1}`}
-                  className="w-full h-full object-contain"
-                />
+        <img
+          src={images[currentIndex].public_url}
+          alt={images[currentIndex].alt_text || `${productName} - Imagem ${currentIndex + 1}`}
+          className="w-full h-full object-cover"
+        />
         
         {images.length > 1 && (
           <>
