@@ -5,7 +5,7 @@ import { useAuth } from './useAuth';
 export interface User {
   id: string;
   email: string;
-  full_name: string | null;
+  name: string | null;
   tenant_id: string;
 }
 
@@ -28,13 +28,13 @@ export const useUsers = (searchQuery?: string) => {
 
       let query = supabase
         .from('users')
-        .select('id, email, full_name, tenant_id')
+        .select('id, email, name, tenant_id')
         .eq('tenant_id', userData.tenant_id)
-        .order('full_name', { ascending: true, nullsFirst: false });
+        .order('name', { ascending: true, nullsFirst: false });
 
       // Apply search filter if provided
       if (searchQuery && searchQuery.trim()) {
-        query = query.or(`full_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
+        query = query.or(`name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`);
       }
 
       const { data, error } = await query;

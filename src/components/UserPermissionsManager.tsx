@@ -90,7 +90,7 @@ export function UserPermissionsManager() {
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center justify-between w-full pr-4">
                       <div className="flex flex-col items-start">
-                        <span className="font-medium">{user.full_name || user.email}</span>
+                        <span className="font-medium">{user.name || user.email}</span>
                         <span className="text-sm text-muted-foreground">{user.email}</span>
                       </div>
                     </div>
