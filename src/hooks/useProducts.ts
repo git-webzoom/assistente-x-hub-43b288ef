@@ -14,6 +14,7 @@ export interface Product {
   sku: string | null;
   stock: number | null;
   category: string | null;
+  slug: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -38,7 +39,7 @@ export const useProducts = () => {
   });
 
   const createProduct = useMutation({
-    mutationFn: async (product: Omit<Product, 'id' | 'tenant_id' | 'created_at' | 'updated_at'>) => {
+    mutationFn: async (product: Omit<Product, 'id' | 'tenant_id' | 'slug' | 'created_at' | 'updated_at'>) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { data: userData } = await supabase
