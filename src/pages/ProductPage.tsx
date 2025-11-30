@@ -112,24 +112,52 @@ export default function ProductPage() {
                   <h2 className="text-lg font-semibold text-gray-900 mb-3">
                     Informações Adicionais
                   </h2>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {visibleCustomFields.map((field) => (
-                      <div
-                        key={field.id}
-                        className="flex gap-2 text-sm"
-                      >
-                        <span className="text-gray-600 font-medium min-w-[140px]">
-                          {field.field_label}:
-                        </span>
-                        <span className="text-gray-900">
-                          {field.field_type === 'boolean'
-                            ? field.value
-                              ? 'Sim'
-                              : 'Não'
-                            : field.field_type === 'date'
-                            ? new Date(field.value).toLocaleDateString('pt-BR')
-                            : field.value}
-                        </span>
+                      <div key={field.id}>
+                        {/* If field has variation stocks, show them */}
+                        {field.variationStocks && field.variationStocks.length > 0 ? (
+                          <div className="space-y-2">
+                            <span className="text-gray-600 font-medium text-sm">
+                              {field.field_label}:
+                            </span>
+                            <div className="grid grid-cols-2 gap-2 ml-2">
+                              {field.variationStocks.map((variation) => (
+                                <div
+                                  key={`${variation.custom_field_id}-${variation.option_value}`}
+                                  className="flex items-center justify-between px-3 py-2 bg-gray-50 rounded-md border border-gray-200"
+                                >
+                                  <span className="text-sm text-gray-900">
+                                    {variation.option_value}
+                                  </span>
+                                  <span className={`text-sm font-medium ${
+                                    variation.quantity > 0 ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    {variation.quantity > 0 
+                                      ? `${variation.quantity} un` 
+                                      : 'Sem estoque'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          /* Regular field display */
+                          <div className="flex gap-2 text-sm">
+                            <span className="text-gray-600 font-medium min-w-[140px]">
+                              {field.field_label}:
+                            </span>
+                            <span className="text-gray-900">
+                              {field.field_type === 'boolean'
+                                ? field.value
+                                  ? 'Sim'
+                                  : 'Não'
+                                : field.field_type === 'date'
+                                ? new Date(field.value).toLocaleDateString('pt-BR')
+                                : field.value}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

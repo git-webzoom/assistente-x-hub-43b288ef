@@ -4,11 +4,12 @@ import type { Product } from './useProducts';
 import type { ProductImage } from './useProductImages';
 import type { CustomField } from './useCustomFields';
 import type { CustomFieldValue } from './useCustomFieldValues';
+import type { ProductVariationStock } from './useProductVariationStock';
 
 interface PublicProductData {
   product: Product;
   images: ProductImage[];
-  customFields: Array<CustomField & { value: any }>;
+  customFields: Array<CustomField & { value: any; variationStocks?: ProductVariationStock[] }>;
   tenantName: string;
 }
 
@@ -63,14 +64,33 @@ export const usePublicProduct = (slug: string) => {
 
       if (fieldValuesError) throw fieldValuesError;
 
-      // Merge custom fields with their values
+      // Fetch variation stocks for fields with stock control
+      const { data: variationStocksData, error: variationStocksError } = await supabase
+        .from('product_custom_field_stock')
+        .select('*')
+        .eq('product_id', product.id)
+        .order('custom_field_id')
+        .order('option_value');
+
+      if (variationStocksError) throw variationStocksError;
+
+      // Merge custom fields with their values and variation stocks
       const customFields = (customFieldsData || []).map((field) => {
         const fieldValue = (fieldValuesData || []).find(
           (fv: CustomFieldValue) => fv.custom_field_id === field.id
         );
+        
+        // If field has stock control, attach variation stocks
+        const variationStocks = field.has_stock_control
+          ? (variationStocksData || []).filter(
+              (vs: ProductVariationStock) => vs.custom_field_id === field.id
+            )
+          : undefined;
+
         return {
           ...field,
           value: fieldValue?.value || null,
+          variationStocks,
         };
       });
 
