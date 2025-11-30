@@ -61,6 +61,7 @@ export const CustomFieldDialog = ({
     display_order: 0,
     scope: 'entity' as 'entity' | 'product',
     scope_target_id: null as string | null,
+    has_stock_control: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -76,6 +77,7 @@ export const CustomFieldDialog = ({
         display_order: customField.display_order,
         scope: customField.scope || 'entity',
         scope_target_id: customField.scope_target_id || null,
+        has_stock_control: customField.has_stock_control || false,
       });
     } else {
       setFormData({
@@ -88,6 +90,7 @@ export const CustomFieldDialog = ({
         display_order: 0,
         scope: 'entity',
         scope_target_id: null,
+        has_stock_control: false,
       });
     }
     setErrors({});
@@ -106,6 +109,7 @@ export const CustomFieldDialog = ({
         display_order: formData.display_order,
         scope: formData.scope,
         scope_target_id: formData.scope === 'product' ? formData.scope_target_id : null,
+        has_stock_control: formData.field_type === 'select' ? formData.has_stock_control : false,
         options:
           validatedData.field_type === 'select' && validatedData.options
             ? validatedData.options.split('\n').map((opt) => opt.trim()).filter(Boolean)
@@ -212,17 +216,39 @@ export const CustomFieldDialog = ({
           </div>
 
           {formData.field_type === 'select' && (
-            <div className="space-y-2">
-              <Label htmlFor="options">Opções (uma por linha) *</Label>
-              <Textarea
-                id="options"
-                value={formData.options}
-                onChange={(e) => setFormData({ ...formData, options: e.target.value })}
-                placeholder="Opção 1&#10;Opção 2&#10;Opção 3"
-                rows={4}
-              />
-              {errors.options && <p className="text-sm text-destructive">{errors.options}</p>}
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="options">Opções (uma por linha) *</Label>
+                <Textarea
+                  id="options"
+                  value={formData.options}
+                  onChange={(e) => setFormData({ ...formData, options: e.target.value })}
+                  placeholder="Opção 1&#10;Opção 2&#10;Opção 3"
+                  rows={4}
+                />
+                {errors.options && <p className="text-sm text-destructive">{errors.options}</p>}
+              </div>
+
+              {formData.entity_type === 'product' && (
+                <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/30">
+                  <Checkbox
+                    id="has_stock_control"
+                    checked={formData.has_stock_control}
+                    onCheckedChange={(checked) =>
+                      setFormData({ ...formData, has_stock_control: checked as boolean })
+                    }
+                  />
+                  <div className="flex-1">
+                    <Label htmlFor="has_stock_control" className="cursor-pointer font-medium">
+                      Controlar estoque por variação
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Permite gerenciar quantidades diferentes para cada opção deste campo
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {formData.entity_type === 'product' && (

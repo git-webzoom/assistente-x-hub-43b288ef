@@ -18,6 +18,7 @@ export interface CustomField {
   created_at: string;
   scope: 'entity' | 'product';
   scope_target_id: string | null;
+  has_stock_control: boolean;
 }
 
 export const useCustomFields = (entityType?: CustomFieldEntity, productId?: string) => {

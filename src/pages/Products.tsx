@@ -40,6 +40,7 @@ import { DataTableWrapper } from '@/components/DataTableWrapper';
 import { ProductImageUpload, type PendingImage } from '@/components/ProductImageUpload';
 import { useProductImages } from '@/hooks/useProductImages';
 import { useToast } from '@/hooks/use-toast';
+import ProductVariationStockManager from '@/components/ProductVariationStockManager';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -383,9 +384,10 @@ export default function Products() {
 
         <div className="flex-1 overflow-y-auto pr-4">
           <Tabs defaultValue="info" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="info">Informações</TabsTrigger>
               <TabsTrigger value="images">Imagens</TabsTrigger>
+              <TabsTrigger value="variations" disabled={!editingProduct}>Variações</TabsTrigger>
             </TabsList>
 
             <form id="product-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
@@ -512,6 +514,12 @@ export default function Products() {
                 />
               </TabsContent>
           </form>
+
+          {editingProduct && (
+            <TabsContent value="variations" className="space-y-4 pt-4">
+              <ProductVariationStockManager productId={editingProduct.id} />
+            </TabsContent>
+          )}
           </Tabs>
         </div>
 

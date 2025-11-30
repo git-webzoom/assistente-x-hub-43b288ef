@@ -162,19 +162,20 @@ export default function CustomFieldSettings() {
               <TableHead>Escopo</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Obrigatório</TableHead>
+              <TableHead>Estoque</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8">
+                <TableCell colSpan={8} className="text-center py-8">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : customFields?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   Nenhum campo personalizado encontrado.
                 </TableCell>
               </TableRow>
@@ -209,6 +210,13 @@ export default function CustomFieldSettings() {
                     <TableCell>
                       {field.is_required ? (
                         <Badge variant="secondary">Sim</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">Não</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {field.has_stock_control ? (
+                        <Badge variant="default">Sim</Badge>
                       ) : (
                         <span className="text-muted-foreground">Não</span>
                       )}
