@@ -6,7 +6,7 @@ import { toast } from './use-toast';
 export interface UserWithPermissions {
   id: string;
   email: string;
-  full_name: string | null;
+  name: string | null;
   permissions: {
     entity_key: string;
     can_view: boolean;
@@ -39,9 +39,9 @@ export const useManageUserPermissions = () => {
       // Get all users in tenant
       const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('id, email, full_name')
+        .select('id, email, name')
         .eq('tenant_id', userData.tenant_id)
-        .order('full_name', { ascending: true, nullsFirst: false });
+        .order('name', { ascending: true, nullsFirst: false });
 
       if (usersError) throw usersError;
 

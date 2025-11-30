@@ -46,7 +46,7 @@ export const UserSelect = ({
           <div className="flex items-center gap-2">
             <UserIcon className="h-4 w-4" />
             {selectedUser ? (
-              selectedUser.full_name || selectedUser.email
+              selectedUser.name || selectedUser.email
             ) : (
               placeholder
             )}
@@ -82,8 +82,8 @@ export const UserSelect = ({
                     )}
                   />
                   <div className="flex flex-col">
-                    <span>{user.full_name || user.email}</span>
-                    {user.full_name && (
+                    <span>{user.name || user.email}</span>
+                    {user.name && (
                       <span className="text-xs text-muted-foreground">
                         {user.email}
                       </span>

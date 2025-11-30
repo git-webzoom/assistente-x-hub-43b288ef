@@ -24,7 +24,7 @@ export interface Task {
   };
   assigned_user?: {
     id: string;
-    full_name: string | null;
+    name: string | null;
     email: string;
   };
 }
@@ -43,7 +43,7 @@ export const useTasks = () => {
         .select(`
           *,
           contact:contacts(id, name, email),
-          assigned_user:users!assigned_to(id, full_name, email)
+          assigned_user:users!assigned_to(id, name, email)
         `)
         .order('due_date', { ascending: true, nullsFirst: false });
 

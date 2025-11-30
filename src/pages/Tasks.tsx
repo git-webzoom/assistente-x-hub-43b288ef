@@ -261,7 +261,7 @@ export default function Tasks() {
                         <span className="flex items-center gap-2">
                           👤
                           <span className="font-medium text-foreground">
-                            {task.assigned_user.full_name || task.assigned_user.email}
+                            {task.assigned_user.name || task.assigned_user.email}
                           </span>
                         </span>
                       )}
