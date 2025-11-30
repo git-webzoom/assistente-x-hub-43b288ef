@@ -77,12 +77,16 @@ export default function Calendar() {
   const handleOpenDialog = (appointment?: Appointment, date?: Date) => {
     if (appointment) {
       setEditingAppointment(appointment);
+      // Remover timezone da string para evitar conversão
+      const startTimeStr = appointment.start_time.replace(/[TZ]/g, ' ').trim().substring(0, 16).replace(' ', 'T');
+      const endTimeStr = appointment.end_time.replace(/[TZ]/g, ' ').trim().substring(0, 16).replace(' ', 'T');
+      
       setFormData({
         title: appointment.title,
         description: appointment.description || '',
         contact_id: appointment.contact_id || '',
-        start_time: format(new Date(appointment.start_time), "yyyy-MM-dd'T'HH:mm"),
-        end_time: format(new Date(appointment.end_time), "yyyy-MM-dd'T'HH:mm"),
+        start_time: startTimeStr,
+        end_time: endTimeStr,
         location: appointment.location || '',
         status: appointment.status,
       });
@@ -147,9 +151,12 @@ export default function Calendar() {
   const calendarDays = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const getAppointmentsForDay = (day: Date) => {
-    return appointments?.filter((appointment) =>
-      isSameDay(new Date(appointment.start_time), day)
-    ) || [];
+    return appointments?.filter((appointment) => {
+      // Pegar apenas a parte da data sem timezone
+      const appointmentDateStr = appointment.start_time.substring(0, 10);
+      const dayStr = format(day, 'yyyy-MM-dd');
+      return appointmentDateStr === dayStr;
+    }) || [];
   };
 
   const getStatusColor = (status: Appointment['status']) => {
@@ -162,9 +169,12 @@ export default function Calendar() {
   };
 
   const getDayAppointments = (date: Date) => {
-    return appointments?.filter((appointment) =>
-      isSameDay(new Date(appointment.start_time), date)
-    ) || [];
+    return appointments?.filter((appointment) => {
+      // Pegar apenas a parte da data sem timezone
+      const appointmentDateStr = appointment.start_time.substring(0, 10);
+      const dayStr = format(date, 'yyyy-MM-dd');
+      return appointmentDateStr === dayStr;
+    }) || [];
   };
 
   return (
@@ -292,11 +302,11 @@ export default function Calendar() {
                                         <p className="font-medium text-sm">
                                           {appointment.title}
                                         </p>
-                                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                          <Clock className="w-3 h-3" />
-                                          {format(new Date(appointment.start_time), 'HH:mm')} -{' '}
-                                          {format(new Date(appointment.end_time), 'HH:mm')}
-                                        </p>
+                                         <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                           <Clock className="w-3 h-3" />
+                                           {appointment.start_time.substring(11, 16)} -{' '}
+                                           {appointment.end_time.substring(11, 16)}
+                                         </p>
                                         {appointment.location && (
                                           <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                                             <MapPin className="w-3 h-3" />
@@ -374,9 +384,13 @@ export default function Calendar() {
                   Array.from({ length: 5 }).map((_, i) => (
                     <Skeleton key={i} className="h-24 w-full" />
                   ))
-                ) : appointments && appointments.length > 0 ? (
+                 ) : appointments && appointments.length > 0 ? (
                   appointments
-                    .filter((apt) => new Date(apt.start_time) >= new Date())
+                    .filter((apt) => {
+                      const aptDateStr = apt.start_time.substring(0, 16);
+                      const nowStr = format(new Date(), "yyyy-MM-dd'T'HH:mm");
+                      return aptDateStr >= nowStr;
+                    })
                     .slice(0, 10)
                     .map((appointment) => {
                       const statusVariants = {
@@ -401,23 +415,23 @@ export default function Calendar() {
                             </div>
 
                             <div className="space-y-1 text-xs text-muted-foreground">
-                              <div className="flex items-center gap-2">
-                                <CalendarIcon className="w-3 h-3" />
-                                <span>
-                                  {format(
-                                    new Date(appointment.start_time),
-                                    "dd 'de' MMMM",
-                                    { locale: ptBR }
-                                  )}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Clock className="w-3 h-3" />
-                                <span>
-                                  {format(new Date(appointment.start_time), 'HH:mm')} -{' '}
-                                  {format(new Date(appointment.end_time), 'HH:mm')}
-                                </span>
-                              </div>
+                               <div className="flex items-center gap-2">
+                                 <CalendarIcon className="w-3 h-3" />
+                                 <span>
+                                   {format(
+                                     new Date(appointment.start_time.substring(0, 10)),
+                                     "dd 'de' MMMM",
+                                     { locale: ptBR }
+                                   )}
+                                 </span>
+                               </div>
+                               <div className="flex items-center gap-2">
+                                 <Clock className="w-3 h-3" />
+                                 <span>
+                                   {appointment.start_time.substring(11, 16)} -{' '}
+                                   {appointment.end_time.substring(11, 16)}
+                                 </span>
+                               </div>
                               {appointment.location && (
                                 <div className="flex items-center gap-2">
                                   <MapPin className="w-3 h-3" />
