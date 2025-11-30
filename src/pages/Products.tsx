@@ -41,7 +41,6 @@ import { ProductImageUpload, type PendingImage } from '@/components/ProductImage
 import { useProductImages } from '@/hooks/useProductImages';
 import { useToast } from '@/hooks/use-toast';
 import ProductVariationStockManager from '@/components/ProductVariationStockManager';
-import { useProductsWithVariationStock } from '@/hooks/useProductsWithVariationStock';
 import { useProductVariationStock } from '@/hooks/useProductVariationStock';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -49,7 +48,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 export default function Products() {
   const { toast } = useToast();
   const { products, isLoading, createProduct, createProductAsync, updateProduct, deleteProduct } = useProducts();
-  const { getProductStock } = useProductsWithVariationStock();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -283,24 +281,13 @@ export default function Products() {
                       : '-'}
                   </TableCell>
                   <TableCell>
-                    {(() => {
-                      const variationStock = getProductStock(product.id);
-                      if (variationStock?.has_variations) {
-                        const total = variationStock.total_variation_stock;
-                        return (
-                          <Badge variant={total > 10 ? 'default' : 'destructive'}>
-                            {total} un
-                          </Badge>
-                        );
-                      }
-                      return product.stock !== null ? (
-                        <Badge variant={product.stock > 10 ? 'default' : 'destructive'}>
-                          {product.stock} un
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      );
-                    })()}
+                    {product.stock !== null ? (
+                      <Badge variant={product.stock > 10 ? 'default' : 'destructive'}>
+                        {product.stock} un
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant={product.is_active ? 'default' : 'secondary'}>
