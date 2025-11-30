@@ -39,11 +39,14 @@ import { useContacts } from '@/hooks/useContacts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CustomFieldsSection } from '@/components/CustomFieldsSection';
 import { ContactSelect } from '@/components/ContactSelect';
+import { UserSelect } from '@/components/UserSelect';
 import { SearchWithFilter } from '@/components/SearchWithFilter';
+import { useUserRole } from '@/hooks/useUserRole';
 
 export default function Tasks() {
   const { tasks, isLoading, createTask, updateTask, deleteTask } = useTasks();
   const { contacts } = useContacts();
+  const { role } = useUserRole();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -55,6 +58,7 @@ export default function Tasks() {
     title: string;
     description: string;
     contact_id: string;
+    assigned_to: string;
     due_date: string;
     priority: 'low' | 'medium' | 'high';
     status: 'pending' | 'in_progress' | 'completed';
@@ -62,6 +66,7 @@ export default function Tasks() {
     title: '',
     description: '',
     contact_id: '',
+    assigned_to: '',
     due_date: '',
     priority: 'medium',
     status: 'pending',
@@ -74,6 +79,7 @@ export default function Tasks() {
         title: task.title,
         description: task.description || '',
         contact_id: task.contact_id || '',
+        assigned_to: task.assigned_to || '',
         due_date: task.due_date ? format(new Date(task.due_date), 'yyyy-MM-dd') : '',
         priority: task.priority,
         status: task.status,
@@ -84,6 +90,7 @@ export default function Tasks() {
         title: '',
         description: '',
         contact_id: '',
+        assigned_to: '',
         due_date: '',
         priority: 'medium',
         status: 'pending',
@@ -103,6 +110,7 @@ export default function Tasks() {
     const data = {
       ...formData,
       contact_id: formData.contact_id && formData.contact_id !== 'none' ? formData.contact_id : null,
+      assigned_to: formData.assigned_to && formData.assigned_to !== 'none' ? formData.assigned_to : null,
       description: formData.description || null,
       due_date: formData.due_date || null,
     };
@@ -249,6 +257,14 @@ export default function Tasks() {
                           {task.contact.name}
                         </span>
                       )}
+                      {task.assigned_user && (
+                        <span className="flex items-center gap-2">
+                          👤
+                          <span className="font-medium text-foreground">
+                            {task.assigned_user.full_name || task.assigned_user.email}
+                          </span>
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -366,6 +382,18 @@ export default function Tasks() {
                   }
                 />
               </div>
+
+              {(role === 'admin' || role === 'superadmin') && (
+                <div className="space-y-2">
+                  <Label htmlFor="assigned_to">Responsável</Label>
+                  <UserSelect
+                    value={formData.assigned_to || undefined}
+                    onChange={(value) =>
+                      setFormData({ ...formData, assigned_to: value || '' })
+                    }
+                  />
+                </div>
+              )}
 
               <CustomFieldsSection
                 entityType="task"

@@ -8,6 +8,7 @@ export interface Task {
   id: string;
   tenant_id: string;
   contact_id: string | null;
+  assigned_to: string | null;
   title: string;
   description: string | null;
   due_date: string | null;
@@ -20,6 +21,11 @@ export interface Task {
     id: string;
     name: string;
     email: string | null;
+  };
+  assigned_user?: {
+    id: string;
+    full_name: string | null;
+    email: string;
   };
 }
 
@@ -36,7 +42,8 @@ export const useTasks = () => {
         .from('tasks')
         .select(`
           *,
-          contact:contacts(id, name, email)
+          contact:contacts(id, name, email),
+          assigned_user:users!assigned_to(id, full_name, email)
         `)
         .order('due_date', { ascending: true, nullsFirst: false });
 
@@ -74,7 +81,7 @@ export const useTasks = () => {
   });
 
   const createTask = useMutation({
-    mutationFn: async (task: Omit<Task, 'id' | 'tenant_id' | 'created_at' | 'updated_at' | 'completed_at' | 'contact'>) => {
+    mutationFn: async (task: Omit<Task, 'id' | 'tenant_id' | 'created_at' | 'updated_at' | 'completed_at' | 'contact' | 'assigned_user'>) => {
       if (!user?.id) throw new Error('User not authenticated');
 
       const { data: userData } = await supabase
@@ -124,7 +131,7 @@ export const useTasks = () => {
     mutationFn: async ({ id, ...updates }: Partial<Task> & { id: string }) => {
       if (!user?.id) throw new Error('User not authenticated');
 
-      const { contact, ...updateData } = updates;
+      const { contact, assigned_user, ...updateData } = updates;
       
       // Buscar task atual antes de atualizar
       const { data: before, error: fetchError } = await supabase
