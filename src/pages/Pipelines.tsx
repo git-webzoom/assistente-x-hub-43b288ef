@@ -19,7 +19,8 @@ import {
 import { usePipelines } from "@/hooks/usePipelines";
 import { useStages } from "@/hooks/useStages";
 import { useCards } from "@/hooks/useCards";
-import type { Card as PipelineCard } from "@/hooks/useCards";
+import type { Card as PipelineCard, Tag } from "@/hooks/useCards";
+import { Badge } from "@/components/ui/badge";
 import { PipelineDialog } from "@/components/PipelineDialog";
 import { StageDialog } from "@/components/StageDialog";
 import { CardDialog } from "@/components/CardDialog";
@@ -45,6 +46,9 @@ interface DraggableCardProps {
     tags: string[] | null;
     position?: number;
     description?: string;
+    card_tags?: Array<{
+      tags: Tag;
+    }>;
   };
   onDelete: (id: string) => void;
   onEdit: (card: DraggableCardProps["card"]) => void;
@@ -95,15 +99,21 @@ const DraggableCard = ({ card, onDelete, onEdit }: DraggableCardProps) => {
         </span>
       </div>
 
-      {card.tags && card.tags.length > 0 && (
+      {card.card_tags && card.card_tags.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {card.tags.map((tag) => (
-            <span
-              key={tag}
-              className="px-2 py-1 text-xs rounded-full bg-primary/10 text-primary"
+          {card.card_tags.map((ct) => (
+            <Badge
+              key={ct.tags.id}
+              variant="secondary"
+              style={{
+                backgroundColor: ct.tags.color ? `${ct.tags.color}20` : undefined,
+                borderColor: ct.tags.color || undefined,
+                color: ct.tags.color || undefined,
+              }}
+              className="text-xs border"
             >
-              {tag}
-            </span>
+              {ct.tags.name}
+            </Badge>
           ))}
         </div>
       )}
