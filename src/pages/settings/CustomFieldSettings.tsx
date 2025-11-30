@@ -29,6 +29,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { CustomFieldDialog } from '@/components/CustomFieldDialog';
 import { useCustomFields, CustomField, CustomFieldEntity } from '@/hooks/useCustomFields';
+import { useProducts } from '@/hooks/useProducts';
 
 const entityLabels: Record<CustomFieldEntity, string> = {
   contact: 'Contato',
@@ -47,6 +48,7 @@ const fieldTypeLabels = {
 };
 
 export default function CustomFieldSettings() {
+  const { products } = useProducts();
   const [filterEntity, setFilterEntity] = useState<CustomFieldEntity | 'all'>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingField, setEditingField] = useState<CustomField | null>(null);
@@ -157,6 +159,7 @@ export default function CustomFieldSettings() {
               <TableHead>Nome</TableHead>
               <TableHead>Identificador</TableHead>
               <TableHead>Entidade</TableHead>
+              <TableHead>Escopo</TableHead>
               <TableHead>Tipo</TableHead>
               <TableHead>Obrigatório</TableHead>
               <TableHead className="text-right">Ações</TableHead>
@@ -165,54 +168,72 @@ export default function CustomFieldSettings() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : customFields?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   Nenhum campo personalizado encontrado.
                 </TableCell>
               </TableRow>
             ) : (
-              customFields?.map((field) => (
-                <TableRow key={field.id}>
-                  <TableCell className="font-medium">{field.field_label}</TableCell>
-                  <TableCell>
-                    <code className="text-xs bg-muted px-2 py-1 rounded">{field.field_name}</code>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{entityLabels[field.entity_type]}</Badge>
-                  </TableCell>
-                  <TableCell>{fieldTypeLabels[field.field_type]}</TableCell>
-                  <TableCell>
-                    {field.is_required ? (
-                      <Badge variant="secondary">Sim</Badge>
-                    ) : (
-                      <span className="text-muted-foreground">Não</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenDialog(field)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(field.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
+              customFields?.map((field) => {
+                const targetProduct = field.scope === 'product' && field.scope_target_id
+                  ? products?.find(p => p.id === field.scope_target_id)
+                  : null;
+
+                return (
+                  <TableRow key={field.id}>
+                    <TableCell className="font-medium">{field.field_label}</TableCell>
+                    <TableCell>
+                      <code className="text-xs bg-muted px-2 py-1 rounded">{field.field_name}</code>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{entityLabels[field.entity_type]}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      {field.scope === 'entity' ? (
+                        <Badge variant="default">Global</Badge>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          <Badge variant="secondary">Específico</Badge>
+                          {targetProduct && (
+                            <span className="text-xs text-muted-foreground">{targetProduct.name}</span>
+                          )}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>{fieldTypeLabels[field.field_type]}</TableCell>
+                    <TableCell>
+                      {field.is_required ? (
+                        <Badge variant="secondary">Sim</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">Não</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDialog(field)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(field.id)}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
