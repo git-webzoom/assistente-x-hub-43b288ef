@@ -9,6 +9,7 @@ interface PublicProductData {
   product: Product;
   images: ProductImage[];
   customFields: Array<CustomField & { value: any }>;
+  tenantName: string;
 }
 
 export const usePublicProduct = (slug: string) => {
@@ -18,7 +19,7 @@ export const usePublicProduct = (slug: string) => {
       // Fetch product by slug (public access, only active products)
       const { data: product, error: productError } = await supabase
         .from('products')
-        .select('*')
+        .select('*, tenants(name)')
         .eq('slug', slug)
         .eq('is_active', true)
         .maybeSingle();
@@ -77,6 +78,7 @@ export const usePublicProduct = (slug: string) => {
         product,
         images,
         customFields,
+        tenantName: (product as any).tenants?.name || '',
       };
     },
     enabled: !!slug,
