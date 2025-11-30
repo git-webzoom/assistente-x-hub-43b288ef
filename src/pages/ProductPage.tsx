@@ -48,14 +48,14 @@ export default function ProductPage() {
     );
   }
 
-  const { product, images, customFields } = data;
+  const { product, images, customFields, tenantName } = data;
   const visibleCustomFields = customFields.filter((cf) => cf.value !== null && cf.value !== '');
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container max-w-6xl mx-auto px-4 py-4">
+        <div className="container max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Button
             variant="ghost"
             size="sm"
@@ -65,6 +65,9 @@ export default function ProductPage() {
             <ArrowLeft className="h-4 w-4" />
             Voltar
           </Button>
+          {tenantName && (
+            <h2 className="text-lg font-semibold text-foreground">{tenantName}</h2>
+          )}
         </div>
       </header>
 
