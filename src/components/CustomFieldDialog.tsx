@@ -229,11 +229,6 @@ export const CustomFieldDialog = ({
                 {errors.options && <p className="text-sm text-destructive">{errors.options}</p>}
               </div>
 
-              {/* DEBUG: Verificar valores */}
-              <div className="text-xs text-muted-foreground p-2 bg-yellow-50 dark:bg-yellow-950 rounded">
-                DEBUG - field_type: {formData.field_type}, entity_type: {formData.entity_type}
-              </div>
-
               {formData.entity_type === 'product' && (
                 <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/30">
                   <Checkbox
