@@ -14,6 +14,7 @@ import DashboardHome from "./pages/DashboardHome";
 import Pipelines from "./pages/Pipelines";
 import Contacts from "./pages/Contacts";
 import Products from "./pages/Products";
+import ProductPage from "./pages/ProductPage";
 import Calendar from "./pages/Calendar";
 import Tasks from "./pages/Tasks";
 import Settings from "./pages/Settings";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
               <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
+              <Route path="/p/:slug" element={<ProductPage />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>}>
                 <Route index element={<DashboardHome />} />
                 <Route path="pipelines" element={<Pipelines />} />

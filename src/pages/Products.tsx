@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Pencil, Trash2, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Package, Copy, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -39,9 +39,12 @@ import { SearchInput } from '@/components/SearchInput';
 import { DataTableWrapper } from '@/components/DataTableWrapper';
 import { ProductImageUpload, type PendingImage } from '@/components/ProductImageUpload';
 import { useProductImages } from '@/hooks/useProductImages';
+import { useToast } from '@/hooks/use-toast';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Products() {
+  const { toast } = useToast();
   const { products, isLoading, createProduct, createProductAsync, updateProduct, deleteProduct } = useProducts();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -49,9 +52,10 @@ export default function Products() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<string | null>(null);
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
+  const [imagesToDelete, setImagesToDelete] = useState<Array<{id: string, storagePath: string}>>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { uploadImages } = useProductImages();
+  const { images: existingImages, uploadImages, deleteImage, setPrimaryImage } = useProductImages(editingProduct?.id);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -97,6 +101,7 @@ export default function Products() {
     setIsDialogOpen(false);
     setEditingProduct(null);
     setPendingImages([]);
+    setImagesToDelete([]);
   };
 
   // Limpar previews ao desmontar
@@ -126,6 +131,11 @@ export default function Products() {
       if (editingProduct) {
         updateProduct({ id: editingProduct.id, ...data });
         productId = editingProduct.id;
+
+        // Deletar imagens marcadas para exclusão
+        for (const imageToDelete of imagesToDelete) {
+          await deleteImage({ imageId: imageToDelete.id, storagePath: imageToDelete.storagePath });
+        }
       } else {
         // Criar produto e aguardar resposta
         const newProduct = await createProductAsync(data);
@@ -175,6 +185,15 @@ export default function Products() {
     product.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.category?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const copyProductUrl = (slug: string) => {
+    const url = `${window.location.origin}/p/${slug}`;
+    navigator.clipboard.writeText(url);
+    toast({
+      title: 'URL copiada!',
+      description: 'O link do produto foi copiado para a área de transferência.',
+    });
+  };
 
   return (
     <div className="space-y-6">
@@ -277,6 +296,22 @@ export default function Products() {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => copyProductUrl(product.slug)}
+                        title="Copiar URL de compartilhamento"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => window.open(`/p/${product.slug}`, '_blank')}
+                        title="Abrir página pública"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() => handleOpenDialog(product)}
                       >
                         <Pencil className="w-4 h-4" />
@@ -319,6 +354,31 @@ export default function Products() {
               ? 'Atualize as informações do produto'
               : 'Preencha os dados do novo produto'}
           </DialogDescription>
+          {editingProduct && (
+            <div className="flex items-center gap-2 mt-2 p-2 bg-muted rounded-md">
+              <code className="text-xs flex-1 truncate">
+                {window.location.origin}/p/{editingProduct.slug}
+              </code>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => copyProductUrl(editingProduct.slug)}
+              >
+                <Copy className="h-3 w-3" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => window.open(`/p/${editingProduct.slug}`, '_blank')}
+              >
+                <ExternalLink className="h-3 w-3" />
+              </Button>
+            </div>
+          )}
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto pr-4">
@@ -431,6 +491,23 @@ export default function Products() {
                   pendingImages={pendingImages}
                   onImagesChange={setPendingImages}
                   maxImages={10}
+                  existingImages={existingImages?.filter(img => img.public_url).map(img => ({
+                    id: img.id,
+                    public_url: img.public_url!,
+                    is_primary: img.is_primary,
+                    metadata: { alt_text: img.alt_text || undefined }
+                  })) || []}
+                  onDeleteExisting={(imageId) => {
+                    const image = existingImages?.find(img => img.id === imageId);
+                    if (image) {
+                      setImagesToDelete([...imagesToDelete, { id: imageId, storagePath: image.storage_path }]);
+                    }
+                  }}
+                  onSetExistingPrimary={async (imageId) => {
+                    if (editingProduct) {
+                      await setPrimaryImage({ productId: editingProduct.id, imageId });
+                    }
+                  }}
                 />
               </TabsContent>
           </form>

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Upload, X, Star, Loader2, Image as ImageIcon } from 'lucide-react';
+import { Upload, X, Star, Loader2, Image as ImageIcon, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -44,6 +44,14 @@ interface ProductImageUploadProps {
   pendingImages: PendingImage[];
   onImagesChange: (images: PendingImage[]) => void;
   maxImages?: number;
+  existingImages?: Array<{
+    id: string;
+    public_url: string;
+    is_primary: boolean;
+    metadata?: { alt_text?: string };
+  }>;
+  onDeleteExisting?: (imageId: string) => void;
+  onSetExistingPrimary?: (imageId: string) => void;
 }
 
 // Componente sortable para cada imagem
@@ -162,6 +170,9 @@ export const ProductImageUpload = ({
   pendingImages,
   onImagesChange,
   maxImages = 10,
+  existingImages = [],
+  onDeleteExisting,
+  onSetExistingPrimary,
 }: ProductImageUploadProps) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -322,47 +333,120 @@ export const ProductImageUpload = ({
     [pendingImages, onImagesChange]
   );
 
-  return (
-    <div className="space-y-4">
-      {/* Área de upload */}
-      <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        className={cn(
-          'border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer',
-          isDragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
-        )}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
+  const totalImages = pendingImages.length + existingImages.length;
+  const canAddMore = totalImages < maxImages;
 
-        <div className="flex flex-col items-center gap-2">
-          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-            <Upload className="w-6 h-6 text-primary" />
+  return (
+    <div className="space-y-6">
+      {/* Existing Images Section */}
+      {existingImages.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium">Imagens Atuais</h3>
+            <span className="text-xs text-muted-foreground">
+              ({existingImages.length} {existingImages.length === 1 ? 'imagem' : 'imagens'})
+            </span>
           </div>
-          <div>
-            <p className="font-medium">Clique para selecionar ou arraste imagens</p>
-            <p className="text-sm text-muted-foreground">
-              JPEG, PNG, WebP ou GIF (até {maxImages} imagens)
-            </p>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {existingImages.map((image) => (
+              <div
+                key={image.id}
+                className="relative group aspect-square rounded-lg overflow-hidden border-2 border-border bg-muted"
+              >
+                <img
+                  src={image.public_url}
+                  alt={image.metadata?.alt_text || 'Produto'}
+                  className="w-full h-full object-cover"
+                />
+                
+                {/* Primary Badge */}
+                {image.is_primary && (
+                  <div className="absolute top-2 left-2">
+                    <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-md font-medium">
+                      Principal
+                    </span>
+                  </div>
+                )}
+
+                {/* Actions Overlay */}
+                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  {!image.is_primary && onSetExistingPrimary && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => onSetExistingPrimary(image.id)}
+                      className="h-8 text-xs"
+                    >
+                      Principal
+                    </Button>
+                  )}
+                  {onDeleteExisting && (
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      onClick={() => onDeleteExisting(image.id)}
+                      className="h-8 w-8"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      )}
+
+      {/* New Images Section */}
+      {pendingImages.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium">Novas Imagens</h3>
+            <span className="text-xs text-muted-foreground">
+              ({pendingImages.length} {pendingImages.length === 1 ? 'imagem' : 'imagens'})
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Area */}
+      {canAddMore && (
+        <div
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          className={cn(
+            'border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer',
+            isDragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+          )}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+
+          <div className="flex flex-col items-center gap-2">
+            <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+              <Upload className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <p className="font-medium">Clique para selecionar ou arraste imagens</p>
+              <p className="text-sm text-muted-foreground">
+                JPEG, PNG, WebP ou GIF (até {maxImages - totalImages} imagens restantes)
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Grid de imagens pendentes */}
       {pendingImages.length > 0 && (
         <div>
-          <Label className="mb-2 block">
-            Imagens selecionadas ({pendingImages.length}/{maxImages})
-          </Label>
           <p className="text-sm text-muted-foreground mb-4">
             Arraste para reordenar. Clique na estrela para definir como imagem principal.
           </p>
