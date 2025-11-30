@@ -51,29 +51,31 @@ export const ContactFormDialog = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    if (contact) {
-      setFormData({
-        name: contact.name,
-        email: contact.email || '',
-        phone: contact.phone || '',
-        company: contact.company || '',
-        position: contact.position || '',
-        notes: contact.notes || '',
-      });
-      setSelectedTagIds(contactTags.map(t => t.id));
-    } else {
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        company: '',
-        position: '',
-        notes: '',
-      });
-      setSelectedTagIds([]);
+    if (open) {
+      if (contact) {
+        setFormData({
+          name: contact.name,
+          email: contact.email || '',
+          phone: contact.phone || '',
+          company: contact.company || '',
+          position: contact.position || '',
+          notes: contact.notes || '',
+        });
+        setSelectedTagIds(contactTags.map(t => t.id));
+      } else {
+        setFormData({
+          name: '',
+          email: '',
+          phone: '',
+          company: '',
+          position: '',
+          notes: '',
+        });
+        setSelectedTagIds([]);
+      }
     }
     setErrors({});
-  }, [contact, open, contactTags]);
+  }, [contact, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -44,18 +44,20 @@ export const CardDialog = ({
 
   // Populate form when editing
   useEffect(() => {
-    if (existingCard) {
-      setTitle(existingCard.title);
-      setValue(existingCard.value.toString());
-      setDescription(existingCard.description || "");
-      setSelectedTagIds(cardTags.map(t => t.id));
-    } else {
-      setTitle("");
-      setValue("");
-      setDescription("");
-      setSelectedTagIds([]);
+    if (open) {
+      if (existingCard) {
+        setTitle(existingCard.title);
+        setValue(existingCard.value.toString());
+        setDescription(existingCard.description || "");
+        setSelectedTagIds(cardTags.map(t => t.id));
+      } else {
+        setTitle("");
+        setValue("");
+        setDescription("");
+        setSelectedTagIds([]);
+      }
     }
-  }, [existingCard, cardTags]);
+  }, [existingCard, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
