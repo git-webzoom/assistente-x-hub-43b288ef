@@ -4,6 +4,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { dispatchWebhookFromClient } from "@/lib/webhookClient";
 
+export interface Tag {
+  id: string;
+  name: string;
+  color: string | null;
+}
+
 export interface Card {
   id: string;
   tenant_id: string;
@@ -19,6 +25,9 @@ export interface Card {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  card_tags?: Array<{
+    tags: Tag;
+  }>;
 }
 
 export const useCards = (pipelineId?: string) => {
@@ -45,7 +54,12 @@ export const useCards = (pipelineId?: string) => {
 
       const { data, error } = await supabase
         .from("cards")
-        .select("*")
+        .select(`
+          *,
+          card_tags(
+            tags(id, name, color)
+          )
+        `)
         .in("stage_id", stageIds)
         .order("position", { ascending: true });
 
