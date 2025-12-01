@@ -287,6 +287,7 @@ const Pipelines = () => {
     value: number;
     description?: string;
     tags?: string[];
+    owner_id?: string;
   }) => {
     if (editingCard) {
       // Update existing card
@@ -295,6 +296,7 @@ const Pipelines = () => {
         title: data.title,
         value: data.value,
         description: data.description,
+        owner_id: data.owner_id,
       });
       setEditingCard(null);
     } else {

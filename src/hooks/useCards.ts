@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useUserRole } from "@/hooks/useUserRole";
 import { dispatchWebhookFromClient } from "@/lib/webhookClient";
 
 export interface Tag {
@@ -24,11 +25,17 @@ export interface Card {
   position: number;
   tags: string[] | null;
   created_by: string | null;
+  owner_id: string | null;
   created_at: string;
   updated_at: string;
   card_tags?: Array<{
     tags: Tag;
   }>;
+  owner?: {
+    id: string;
+    name: string;
+    email: string | null;
+  };
 }
 
 export const useCards = (pipelineId?: string) => {
@@ -36,9 +43,10 @@ export const useCards = (pipelineId?: string) => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { currentUser } = useCurrentUser();
+  const { role } = useUserRole();
 
   const { data: cards, isLoading } = useQuery({
-    queryKey: ["cards", pipelineId],
+    queryKey: ["cards", pipelineId, role, user?.id],
     queryFn: async () => {
       if (!pipelineId) return [];
 
@@ -54,21 +62,28 @@ export const useCards = (pipelineId?: string) => {
 
       if (stageIds.length === 0) return [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("cards")
         .select(`
           *,
           card_tags(
             tags(id, name, color)
-          )
+          ),
+          owner:users!owner_id(id, name, email)
         `)
-        .in("stage_id", stageIds)
-        .order("position", { ascending: true });
+        .in("stage_id", stageIds);
+
+      // Usuário normal só vê seus próprios cards
+      if (role === 'user') {
+        query = query.eq('owner_id', user!.id);
+      }
+
+      const { data, error } = await query.order("position", { ascending: true });
 
       if (error) throw error;
       return data as Card[];
     },
-    enabled: !!pipelineId,
+    enabled: !!pipelineId && !!role && !!user?.id,
     staleTime: 2 * 60 * 1000, // 2 minutos
   });
 
@@ -80,6 +95,7 @@ export const useCards = (pipelineId?: string) => {
       value,
       position,
       description,
+      owner_id,
     }: {
       pipelineId: string;
       stageId: string;
@@ -87,6 +103,7 @@ export const useCards = (pipelineId?: string) => {
       value: number;
       position: number;
       description?: string;
+      owner_id?: string;
     }) => {
       if (!user?.id || !currentUser?.tenant_id) throw new Error("User not authenticated");
 
@@ -101,6 +118,7 @@ export const useCards = (pipelineId?: string) => {
           position,
           description: description || null,
           created_by: user.id,
+          owner_id: owner_id || user.id, // Auto-atribuir ao próprio usuário se não especificado
         })
         .select()
         .single();
@@ -142,6 +160,7 @@ export const useCards = (pipelineId?: string) => {
       title,
       value,
       description,
+      owner_id,
     }: {
       id: string;
       stageId?: string;
@@ -149,6 +168,7 @@ export const useCards = (pipelineId?: string) => {
       title?: string;
       value?: number;
       description?: string;
+      owner_id?: string;
     }) => {
       if (!user?.id) throw new Error("User not authenticated");
 
@@ -167,6 +187,7 @@ export const useCards = (pipelineId?: string) => {
       if (title) updates.title = title;
       if (value !== undefined) updates.value = value;
       if (description !== undefined) updates.description = description;
+      if (owner_id !== undefined) updates.owner_id = owner_id;
 
       const { data: after, error } = await supabase
         .from("cards")
