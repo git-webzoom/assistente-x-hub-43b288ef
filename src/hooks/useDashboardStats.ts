@@ -1,25 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { useCurrentUser } from './useCurrentUser';
 
 export const useDashboardStats = () => {
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
 
   const { data: stats, isLoading, error } = useQuery({
-    queryKey: ['dashboard-stats', user?.id],
+    queryKey: ['dashboard-stats', currentUser?.tenant_id],
     queryFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
+      if (!currentUser?.tenant_id) throw new Error('Tenant not found');
 
-      // Get user's tenant_id
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) throw new Error('Tenant not found');
-
-      const tenantId = userData.tenant_id;
+      const tenantId = currentUser.tenant_id;
 
       // Fetch all stats in parallel
       const [contactsCount, tasksCount, pipelineData] = await Promise.all([
@@ -83,8 +76,9 @@ export const useDashboardStats = () => {
         appointments: appointmentsToday.data || []
       };
     },
-    enabled: !!user?.id,
+    enabled: !!currentUser?.tenant_id,
     refetchInterval: 30000, // Refetch every 30 seconds
+    staleTime: 20000, // 20 segundos - dados de dashboard devem ser relativamente frescos
   });
 
   return { stats, isLoading, error };

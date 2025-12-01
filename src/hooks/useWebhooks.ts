@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './useAuth';
+import { useCurrentUser } from './useCurrentUser';
 
 export interface Webhook {
   id: string;
@@ -16,43 +17,29 @@ export const useWebhooks = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
 
   const { data: webhooks, isLoading } = useQuery({
-    queryKey: ['webhooks', user?.id],
+    queryKey: ['webhooks', currentUser?.tenant_id],
     queryFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) throw new Error('Tenant not found');
+      if (!currentUser?.tenant_id) throw new Error('Tenant not found');
 
       const { data, error } = await supabase
         .from('webhooks')
         .select('*')
-        .eq('tenant_id', userData.tenant_id)
+        .eq('tenant_id', currentUser.tenant_id)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data as Webhook[];
     },
-    enabled: !!user?.id,
+    enabled: !!currentUser?.tenant_id,
+    staleTime: 5 * 60 * 1000, // 5 minutos
   });
 
   const createWebhook = useMutation({
     mutationFn: async ({ url, events }: { url: string; events: string[] }) => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) throw new Error('Tenant not found');
+      if (!user?.id || !currentUser?.tenant_id) throw new Error('User not authenticated');
 
       // Gerar secret único para o webhook
       const secret = crypto.randomUUID();
@@ -63,7 +50,7 @@ export const useWebhooks = () => {
           url, 
           events, 
           is_active: true, 
-          tenant_id: userData.tenant_id,
+          tenant_id: currentUser.tenant_id,
           secret 
         }])
         .select()

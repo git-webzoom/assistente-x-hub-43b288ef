@@ -27,7 +27,7 @@ export const useUserEntityPermissions = () => {
       return data as EntityPermission[];
     },
     enabled: !!user?.id,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutos
   });
 
   const hasPermission = (entityKey: string, action: 'view' | 'create' | 'edit' | 'delete') => {

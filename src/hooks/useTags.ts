@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { useCurrentUser } from './useCurrentUser';
 import { toast } from '@/hooks/use-toast';
 
 export interface Tag {
@@ -13,51 +14,37 @@ export interface Tag {
 
 export const useTags = () => {
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
 
   const { data: tags, isLoading } = useQuery({
-    queryKey: ['tags', user?.id],
+    queryKey: ['tags', currentUser?.tenant_id],
     queryFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) throw new Error('Tenant not found');
+      if (!currentUser?.tenant_id) throw new Error('Tenant not found');
 
       const { data, error } = await supabase
         .from('tags')
         .select('*')
-        .eq('tenant_id', userData.tenant_id)
+        .eq('tenant_id', currentUser.tenant_id)
         .order('name', { ascending: true });
 
       if (error) throw error;
       return data as Tag[];
     },
-    enabled: !!user?.id,
+    enabled: !!currentUser?.tenant_id,
+    staleTime: 10 * 60 * 1000, // 10 minutos - tags mudam raramente
   });
 
   const createTag = useMutation({
     mutationFn: async (newTag: { name: string; color?: string }) => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) throw new Error('Tenant not found');
+      if (!user?.id || !currentUser?.tenant_id) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
         .from('tags')
         .insert([{ 
           name: newTag.name.trim(),
           color: newTag.color || null,
-          tenant_id: userData.tenant_id 
+          tenant_id: currentUser.tenant_id 
         }])
         .select()
         .single();

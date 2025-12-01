@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 
@@ -6,51 +6,38 @@ export type AppRole = 'superadmin' | 'admin' | 'supervisor' | 'user';
 
 export function useUserRole() {
   const { user } = useAuth();
-  const [role, setRole] = useState<AppRole | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchUserRole() {
-      if (!user) {
-        setRole(null);
-        setLoading(false);
-        return;
+  const { data: role, isLoading } = useQuery({
+    queryKey: ['user-role', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return null;
+
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return 'user' as AppRole;
       }
 
-      try {
-        // Usar service role key para evitar problemas de RLS
-        const { data, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .maybeSingle(); // Use maybeSingle instead of single to handle no rows gracefully
-
-        if (error) {
-          console.error('Error fetching user role:', error);
-          // Default to 'user' role if there's an error
-          setRole('user');
-        } else if (data) {
-          setRole(data.role as AppRole);
-        } else {
-          // No role found, default to 'user'
-          console.warn('No role found for user, defaulting to user');
-          setRole('user');
-        }
-      } catch (err) {
-        console.error('Error in useUserRole:', err);
-        // Default to 'user' role on any error
-        setRole('user');
-      } finally {
-        setLoading(false);
+      if (!data) {
+        console.warn('No role found for user, defaulting to user');
+        return 'user' as AppRole;
       }
-    }
 
-    fetchUserRole();
-  }, [user]);
+      return data.role as AppRole;
+    },
+    enabled: !!user?.id,
+    staleTime: 5 * 60 * 1000, // 5 minutos - roles mudam raramente
+    gcTime: 15 * 60 * 1000, // 15 minutos
+  });
 
   return { 
     role, 
-    loading, 
+    loading: isLoading, 
     isSuperAdmin: role === 'superadmin',
     isAdmin: role === 'admin' || role === 'superadmin',
     isSupervisor: role === 'supervisor' || role === 'admin' || role === 'superadmin'

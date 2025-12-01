@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { useCurrentUser } from './useCurrentUser';
 import { useToast } from '@/hooks/use-toast';
 import { dispatchWebhookFromClient } from '@/lib/webhookClient';
 
@@ -31,11 +32,12 @@ export interface Task {
 
 export const useTasks = () => {
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ['tasks'],
+    queryKey: ['tasks', currentUser?.tenant_id],
     queryFn: async () => {
       // Primeiro tenta buscar com join
       const { data: tasksWithContact, error: errorWithJoin } = await supabase
@@ -78,23 +80,17 @@ export const useTasks = () => {
 
       return tasksWithoutContact as Task[];
     },
+    enabled: !!currentUser?.tenant_id,
+    staleTime: 2 * 60 * 1000, // 2 minutos
   });
 
   const createTask = useMutation({
     mutationFn: async (task: Omit<Task, 'id' | 'tenant_id' | 'created_at' | 'updated_at' | 'completed_at' | 'contact' | 'assigned_user'>) => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) throw new Error('Tenant not found');
+      if (!user?.id || !currentUser?.tenant_id) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
         .from('tasks')
-        .insert([{ ...task, tenant_id: userData.tenant_id }])
+        .insert([{ ...task, tenant_id: currentUser.tenant_id }])
         .select()
         .single();
 
@@ -105,7 +101,7 @@ export const useTasks = () => {
         event: 'task.created',
         entity: 'task',
         data,
-        tenant_id: userData.tenant_id,
+        tenant_id: currentUser.tenant_id,
         user_id: user.id,
       });
 

@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { useCurrentUser } from './useCurrentUser';
 import { useUserEntityPermissions } from './useUserEntityPermissions';
 
 export interface MenuItem {
@@ -22,30 +23,19 @@ const ALL_MENUS: MenuItem[] = [
 
 export function useTenantMenus() {
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
   const { hasPermission, isLoading: permissionsLoading } = useUserEntityPermissions();
 
   const { data: allowedMenus, isLoading: menusLoading } = useQuery({
-    queryKey: ['tenant-menus', user?.id],
+    queryKey: ['tenant-menus', currentUser?.tenant_id],
     queryFn: async () => {
-      if (!user) return ALL_MENUS.map(m => m.key);
-
-      // Buscar o tenant_id do usuário
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (userError || !userData?.tenant_id) {
-        console.error('Error fetching user tenant:', userError);
-        return ALL_MENUS.map(m => m.key);
-      }
+      if (!currentUser?.tenant_id) return ALL_MENUS.map(m => m.key);
 
       // Buscar as configurações de menu do tenant
       const { data: tenantData, error: tenantError } = await supabase
         .from('tenants')
         .select('menu_settings')
-        .eq('id', userData.tenant_id)
+        .eq('id', currentUser.tenant_id)
         .maybeSingle();
 
       if (tenantError) {
@@ -63,8 +53,8 @@ export function useTenantMenus() {
 
       return enabledMenus;
     },
-    enabled: !!user,
-    staleTime: 1000 * 60 * 5, // Cache por 5 minutos
+    enabled: !!currentUser?.tenant_id,
+    staleTime: 10 * 60 * 1000, // 10 minutos - configurações de menu mudam raramente
   });
 
   const getEnabledMenus = () => {
