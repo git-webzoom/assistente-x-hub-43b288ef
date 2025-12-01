@@ -38,7 +38,7 @@ export interface Card {
   };
 }
 
-export const useCards = (pipelineId?: string) => {
+export const useCards = (pipelineId?: string, ownerFilter?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -46,7 +46,7 @@ export const useCards = (pipelineId?: string) => {
   const { role } = useUserRole();
 
   const { data: cards, isLoading } = useQuery({
-    queryKey: ["cards", pipelineId, role, user?.id],
+    queryKey: ["cards", pipelineId, role, user?.id, ownerFilter],
     queryFn: async () => {
       if (!pipelineId) return [];
 
@@ -76,6 +76,10 @@ export const useCards = (pipelineId?: string) => {
       // Usuário normal só vê seus próprios cards
       if (role === 'user') {
         query = query.eq('owner_id', user!.id);
+      } 
+      // Se um filtro de proprietário foi aplicado (por admin/supervisor), aplicar
+      else if (ownerFilter) {
+        query = query.eq('owner_id', ownerFilter);
       }
 
       const { data, error } = await query.order("position", { ascending: true });

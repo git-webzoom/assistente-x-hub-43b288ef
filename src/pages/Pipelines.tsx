@@ -25,6 +25,8 @@ import { PipelineDialog } from "@/components/PipelineDialog";
 import { StageDialog } from "@/components/StageDialog";
 import { CardDialog } from "@/components/CardDialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import { UserSelect } from "@/components/UserSelect";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   DndContext,
   DragEndEvent,
@@ -249,12 +251,14 @@ const Pipelines = () => {
   const [editingCard, setEditingCard] = useState<any>(null);
   const [activeCard, setActiveCard] = useState<any>(null);
   const [localCards, setLocalCards] = useState<PipelineCard[] | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState<string | undefined>(undefined);
 
+  const { isSupervisor } = useUserRole();
   const { pipelines, isLoading: pipelinesLoading, createPipeline } = usePipelines();
   const { stages, isLoading: stagesLoading, createStage, deleteStage, updateStage, updateStageOrder } =
     useStages(selectedPipelineId);
   const { cards, isLoading: cardsLoading, createCard, updateCard, deleteCard } =
-    useCards(selectedPipelineId);
+    useCards(selectedPipelineId, ownerFilter);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -482,6 +486,15 @@ const Pipelines = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {isSupervisor && (
+                <div className="w-[240px]">
+                  <UserSelect 
+                    value={ownerFilter}
+                    onChange={setOwnerFilter}
+                    placeholder="Filtrar por proprietário..."
+                  />
+                </div>
+              )}
               <Button variant="outline" onClick={() => setStageDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Nova Etapa
