@@ -47,7 +47,6 @@ export const useManageUserPermissions = () => {
           email, 
           name, 
           tenant_id,
-          banned_until,
           user_roles!inner(role)
         `)
         .eq('tenant_id', userData.tenant_id)
@@ -70,7 +69,7 @@ export const useManageUserPermissions = () => {
         name: u.name,
         tenant_id: u.tenant_id,
         role: u.user_roles?.[0]?.role || 'user',
-        is_banned: u.banned_until ? new Date(u.banned_until) > new Date() : false,
+        is_banned: false, // TODO: Add banned_until column check after migration
         permissions: permissions?.filter(p => p.user_id === u.id).map(p => ({
           entity_key: p.entity_key,
           can_view: p.can_view,

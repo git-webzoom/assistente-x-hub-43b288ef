@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -72,6 +72,9 @@ export function CreateUserDialog() {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Criar Novo Usuário</DialogTitle>
+          <DialogDescription>
+            Preencha os dados do novo usuário. Uma senha deve ser definida.
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
@@ -111,6 +114,7 @@ export function CreateUserDialog() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Mínimo 6 caracteres"
+              autoComplete="new-password"
               required
             />
             {errors.password && (
