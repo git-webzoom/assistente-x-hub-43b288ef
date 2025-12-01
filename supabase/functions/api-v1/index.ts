@@ -90,7 +90,7 @@ function parseFilters(url: URL): Filters {
   const params = url.searchParams;
   
   for (const [key, value] of params.entries()) {
-    if (!['limit', 'cursor', 'include', 'tag', 'category', 'category_name', 'owner_id'].includes(key)) {
+    if (!['limit', 'cursor', 'include', 'tag', 'category', 'category_name', 'assigned_to', 'created_by'].includes(key)) {
       if (key.startsWith('custom_fields.')) {
         const fieldName = key.substring('custom_fields.'.length);
         filters[`custom_fields->${fieldName}`] = value;
@@ -754,7 +754,6 @@ async function handleAppointments(req: Request, ctx: AuthContext, path: string[]
     } else {
       const pagination = parsePagination(url);
       const filters = parseFilters(url);
-      const ownerFilter = url.searchParams.get('owner_id');
 
       let query = ctx.supabase
         .from('appointments')
@@ -762,10 +761,6 @@ async function handleAppointments(req: Request, ctx: AuthContext, path: string[]
         .eq('tenant_id', ctx.tenantId)
         .order('start_time', { ascending: true })
         .limit(pagination.limit);
-
-      if (ownerFilter) {
-        query = query.eq('owner_id', ownerFilter);
-      }
 
       query = applyFilters(query, filters);
 
@@ -898,7 +893,7 @@ async function handleTasks(req: Request, ctx: AuthContext, path: string[]): Prom
     } else {
       const pagination = parsePagination(url);
       const filters = parseFilters(url);
-      const ownerFilter = url.searchParams.get('owner_id');
+      const assignedToFilter = url.searchParams.get('assigned_to');
 
       let query = ctx.supabase
         .from('tasks')
@@ -907,8 +902,8 @@ async function handleTasks(req: Request, ctx: AuthContext, path: string[]): Prom
         .order('due_date', { ascending: true, nullsFirst: false })
         .limit(pagination.limit);
 
-      if (ownerFilter) {
-        query = query.eq('owner_id', ownerFilter);
+      if (assignedToFilter) {
+        query = query.eq('assigned_to', assignedToFilter);
       }
 
       query = applyFilters(query, filters);
@@ -1498,7 +1493,7 @@ async function handleCards(req: Request, ctx: AuthContext, path: string[]): Prom
       const stageId = url.searchParams.get('stage_id');
       const pipelineId = url.searchParams.get('pipeline_id');
       const tagFilter = url.searchParams.get('tag');
-      const ownerFilter = url.searchParams.get('owner_id');
+      const createdByFilter = url.searchParams.get('created_by');
 
       let stageIds: string[] = [];
 
@@ -1619,19 +1614,19 @@ async function handleCards(req: Request, ctx: AuthContext, path: string[]): Prom
           .select('*, card_tags(tag_id, tags(*))', { count: 'exact' })
           .in('stage_id', stageIds)
           .in('id', cardIds)
-          .order('order', { ascending: true })
+          .order('position', { ascending: true })
           .limit(pagination.limit);
       } else {
         query = ctx.supabase
           .from('cards')
           .select('*, card_tags(tag_id, tags(*))', { count: 'exact' })
           .in('stage_id', stageIds)
-          .order('order', { ascending: true })
+          .order('position', { ascending: true })
           .limit(pagination.limit);
       }
 
-      if (ownerFilter) {
-        query = query.eq('owner_id', ownerFilter);
+      if (createdByFilter) {
+        query = query.eq('created_by', createdByFilter);
       }
 
       query = applyFilters(query, filters);
