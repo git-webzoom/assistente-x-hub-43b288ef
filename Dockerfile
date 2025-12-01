@@ -36,8 +36,8 @@ RUN npm install -g serve@14.2.1
 # Copy built files
 COPY --from=builder /app/dist ./dist
 
-# Expose port (Easypanel vai usar a variável $PORT)
+# Easypanel vai expor a porta dinamicamente
 EXPOSE 3000
 
-# Start server
-CMD ["serve", "-s", "dist", "-l", "3000", "-n"]
+# Use a variável $PORT do Easypanel (padrão 3000 se não existir)
+CMD sh -c "serve -s dist -l ${PORT:-3000} -n"
