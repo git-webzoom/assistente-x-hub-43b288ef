@@ -2241,8 +2241,17 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const path = url.pathname.replace(/^\/v1\//, '').split('/').filter(Boolean);
+    // Remove both possible prefixes: /v1/ or just the function path
+    let pathname = url.pathname;
+    
+    // Remove leading slashes and split
+    const pathParts = pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+    
+    // If first part is 'v1', skip it
+    const path = pathParts[0] === 'v1' ? pathParts.slice(1) : pathParts;
     const resource = path[0];
+    
+    console.log('API Request:', { pathname: url.pathname, resource, path });
 
     let response: Response;
 
