@@ -69,20 +69,20 @@ export const CardDialog = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (title.trim() && value) {
+      // Update tags first if editing
+      if (existingCard?.id) {
+        await setCardTags.mutateAsync({
+          cardId: existingCard.id,
+          tagIds: selectedTagIds,
+        });
+      }
+      
       onSubmit({
         title: title.trim(),
         value: parseFloat(value),
         description: description.trim() || undefined,
         owner_id: ownerId || undefined,
       });
-      
-      // Update tags after card is saved
-      if (cardId) {
-        await setCardTags.mutateAsync({
-          cardId: cardId,
-          tagIds: selectedTagIds,
-        });
-      }
       
       setTitle("");
       setValue("");
