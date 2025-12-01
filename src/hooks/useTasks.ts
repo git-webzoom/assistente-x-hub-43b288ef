@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { useCurrentUser } from './useCurrentUser';
+import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
 import { dispatchWebhookFromClient } from '@/lib/webhookClient';
 
@@ -33,20 +34,28 @@ export interface Task {
 export const useTasks = () => {
   const { user } = useAuth();
   const { currentUser } = useCurrentUser();
+  const { role } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: tasks, isLoading } = useQuery({
-    queryKey: ['tasks', currentUser?.tenant_id],
+    queryKey: ['tasks', currentUser?.tenant_id, role, user?.id],
     queryFn: async () => {
       // Primeiro tenta buscar com join
-      const { data: tasksWithContact, error: errorWithJoin } = await supabase
+      let query = supabase
         .from('tasks')
         .select(`
           *,
           contact:contacts(id, name, email),
           assigned_user:users!assigned_to(id, name, email)
-        `)
+        `);
+      
+      // Usuário normal só vê suas próprias tarefas
+      if (role === 'user') {
+        query = query.eq('assigned_to', user!.id);
+      }
+      
+      const { data: tasksWithContact, error: errorWithJoin } = await query
         .order('due_date', { ascending: true, nullsFirst: false });
 
       // Se deu certo, retorna
@@ -55,9 +64,16 @@ export const useTasks = () => {
       }
 
       // Se falhou por causa do relacionamento, busca sem join
-      const { data: tasksWithoutContact, error: errorWithoutJoin } = await supabase
+      let fallbackQuery = supabase
         .from('tasks')
-        .select('*')
+        .select('*');
+      
+      // Aplicar filtro por role também no fallback
+      if (role === 'user') {
+        fallbackQuery = fallbackQuery.eq('assigned_to', user!.id);
+      }
+      
+      const { data: tasksWithoutContact, error: errorWithoutJoin } = await fallbackQuery
         .order('due_date', { ascending: true, nullsFirst: false });
 
       if (errorWithoutJoin) throw errorWithoutJoin;
@@ -80,7 +96,7 @@ export const useTasks = () => {
 
       return tasksWithoutContact as Task[];
     },
-    enabled: !!currentUser?.tenant_id,
+    enabled: !!currentUser?.tenant_id && !!role && !!user?.id,
     staleTime: 2 * 60 * 1000, // 2 minutos
   });
 
@@ -88,9 +104,16 @@ export const useTasks = () => {
     mutationFn: async (task: Omit<Task, 'id' | 'tenant_id' | 'created_at' | 'updated_at' | 'completed_at' | 'contact' | 'assigned_user'>) => {
       if (!user?.id || !currentUser?.tenant_id) throw new Error('User not authenticated');
 
+      // Auto-atribuir ao próprio usuário se não especificado
+      const taskData = {
+        ...task,
+        tenant_id: currentUser.tenant_id,
+        assigned_to: task.assigned_to || user.id,
+      };
+
       const { data, error } = await supabase
         .from('tasks')
-        .insert([{ ...task, tenant_id: currentUser.tenant_id }])
+        .insert([taskData])
         .select()
         .single();
 
