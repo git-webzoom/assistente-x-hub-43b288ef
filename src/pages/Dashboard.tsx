@@ -14,13 +14,14 @@ import {
   BookOpen,
   Shield,
 } from "lucide-react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
-import { useTenantMenus } from "@/hooks/useTenantMenus";
+import { useEntityRoutes } from "@/hooks/useEntityRoutes";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import BrandLogo from "@/components/BrandLogo";
+import { NavLink } from "@/components/NavLink";
 
 // Mapeamento de ícones
 const iconMap: Record<string, any> = {
@@ -35,15 +36,27 @@ const iconMap: Record<string, any> = {
 };
 
 const Dashboard = () => {
-  const location = useLocation();
   const { signOut } = useAuth();
   const { isSuperAdmin } = useUserRole();
-  const { enabledMenus, isLoading: menusLoading } = useTenantMenus();
+  const { routes, isLoading: routesLoading } = useEntityRoutes();
 
-  // Adicionar Super Admin ao final se o usuário for superadmin
+  // Converter rotas dinâmicas para formato do menu e adicionar Super Admin
   const menuItems = isSuperAdmin 
-    ? [...enabledMenus, { key: 'superadmin', icon: 'Shield', label: "Super Admin", path: "/dashboard/superadmin" }]
-    : enabledMenus;
+    ? [
+        ...routes.map(route => ({
+          key: route.key,
+          icon: route.icon,
+          label: route.label,
+          path: `/dashboard/${route.slug}`,
+        })),
+        { key: 'superadmin', icon: 'Shield', label: "Super Admin", path: "/dashboard/superadmin" }
+      ]
+    : routes.map(route => ({
+        key: route.key,
+        icon: route.icon,
+        label: route.label,
+        path: `/dashboard/${route.slug}`,
+      }));
 
   return (
     <div className="flex h-screen bg-background">
@@ -56,25 +69,22 @@ const Dashboard = () => {
         </div>
 
         <nav className="flex-1 p-4 space-y-1">
-          {menusLoading ? (
+          {routesLoading ? (
             <div className="text-sidebar-foreground text-sm px-4 py-3">Carregando menus...</div>
           ) : (
             menuItems.map((item) => {
               const Icon = iconMap[item.icon];
-              const isActive = location.pathname === item.path;
               return (
-                <Link
+                <NavLink
                   key={item.path}
                   to={item.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
-                  }`}
+                  end
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg transition-colors text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                  activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
                 >
                   {Icon && <Icon className="w-5 h-5" />}
                   <span className="font-medium">{item.label}</span>
-                </Link>
+                </NavLink>
               );
             })
           )}
