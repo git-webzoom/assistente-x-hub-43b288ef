@@ -69,9 +69,9 @@ export const UserSelect = ({
               {users?.map((user) => (
                 <CommandItem
                   key={user.id}
-                  value={user.id}
-                  onSelect={(currentValue) => {
-                    onChange(currentValue === value ? undefined : currentValue);
+                  value={user.name || user.email}
+                  onSelect={() => {
+                    onChange(user.id === value ? undefined : user.id);
                     setOpen(false);
                   }}
                 >
