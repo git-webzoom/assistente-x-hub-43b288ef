@@ -14,18 +14,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CustomFieldsSection } from "@/components/CustomFieldsSection";
 import { TagSelector } from "@/components/TagSelector";
+import { UserSelect } from "@/components/UserSelect";
 import { useCardTags } from "@/hooks/useCardTags";
+import { useUserRole } from "@/hooks/useUserRole";
 
 interface CardDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (data: { title: string; value: number; description?: string }) => void;
+  onSubmit: (data: { title: string; value: number; description?: string; owner_id?: string }) => void;
   cardId?: string;
   existingCard?: {
     id: string;
     title: string;
     value: number;
     description?: string;
+    owner_id?: string;
   };
 }
 
@@ -37,9 +40,11 @@ export const CardDialog = ({
   existingCard,
 }: CardDialogProps) => {
   const { cardTags, setCardTags } = useCardTags(cardId);
+  const { isSupervisor } = useUserRole();
   const [title, setTitle] = useState("");
   const [value, setValue] = useState("");
   const [description, setDescription] = useState("");
+  const [ownerId, setOwnerId] = useState<string>("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
 
   // Populate form when editing
@@ -49,15 +54,17 @@ export const CardDialog = ({
         setTitle(existingCard.title);
         setValue(existingCard.value.toString());
         setDescription(existingCard.description || "");
+        setOwnerId(existingCard.owner_id || "");
         setSelectedTagIds(cardTags.map(t => t.id));
       } else {
         setTitle("");
         setValue("");
         setDescription("");
+        setOwnerId("");
         setSelectedTagIds([]);
       }
     }
-  }, [existingCard, open]);
+  }, [existingCard, open, cardTags]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,6 +73,7 @@ export const CardDialog = ({
         title: title.trim(),
         value: parseFloat(value),
         description: description.trim() || undefined,
+        owner_id: ownerId || undefined,
       });
       
       // Update tags after card is saved
@@ -79,6 +87,7 @@ export const CardDialog = ({
       setTitle("");
       setValue("");
       setDescription("");
+      setOwnerId("");
       setSelectedTagIds([]);
       onOpenChange(false);
     }
@@ -135,6 +144,20 @@ export const CardDialog = ({
                   onChange={setSelectedTagIds}
                 />
               </div>
+              
+              {isSupervisor && (
+                <div className="space-y-2">
+                  <Label htmlFor="owner_id">Proprietário</Label>
+                  <UserSelect
+                    value={ownerId || undefined}
+                    onChange={(value) => setOwnerId(value || "")}
+                    placeholder="Selecionar proprietário..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se não selecionado, você será o proprietário.
+                  </p>
+                </div>
+              )}
               
               <CustomFieldsSection
                 entityType="card"
