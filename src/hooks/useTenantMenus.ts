@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { useUserEntityPermissions } from './useUserEntityPermissions';
 
 export interface MenuItem {
   key: string;
@@ -21,8 +22,9 @@ const ALL_MENUS: MenuItem[] = [
 
 export function useTenantMenus() {
   const { user } = useAuth();
+  const { hasPermission, isLoading: permissionsLoading } = useUserEntityPermissions();
 
-  const { data: allowedMenus, isLoading } = useQuery({
+  const { data: allowedMenus, isLoading: menusLoading } = useQuery({
     queryKey: ['tenant-menus', user?.id],
     queryFn: async () => {
       if (!user) return ALL_MENUS.map(m => m.key);
@@ -67,12 +69,23 @@ export function useTenantMenus() {
 
   const getEnabledMenus = () => {
     if (!allowedMenus) return ALL_MENUS;
-    return ALL_MENUS.filter(menu => allowedMenus.includes(menu.key));
+    
+    // Filtrar menus baseado nas configurações do tenant E nas permissões do usuário
+    return ALL_MENUS.filter(menu => {
+      // Verificar se o menu está habilitado no tenant
+      if (!allowedMenus.includes(menu.key)) return false;
+      
+      // Dashboard e settings sempre visíveis se habilitados no tenant
+      if (menu.key === 'dashboard' || menu.key === 'settings') return true;
+      
+      // Para outros menus, verificar permissão de visualização da entidade
+      return hasPermission(menu.key, 'view');
+    });
   };
 
   return {
     enabledMenus: getEnabledMenus(),
-    isLoading,
+    isLoading: menusLoading || permissionsLoading,
     allMenus: ALL_MENUS,
   };
 }
