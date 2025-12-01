@@ -462,16 +462,21 @@ const Pipelines = () => {
     );
   }
 
+  const selectedPipeline = pipelines?.find((p) => p.id === selectedPipelineId);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="space-y-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">Funis de Vendas</h1>
+          <h1 className="text-3xl font-bold mb-2">
+            {selectedPipeline ? `Funil - ${selectedPipeline.name}` : "Funis de Vendas"}
+          </h1>
           <p className="text-muted-foreground">
-            Gerencie suas oportunidades através do pipeline de vendas
+            Gerencie suas oportunidades através de pipelines
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        
+        <div className="flex items-center justify-end gap-3">
           {pipelines && pipelines.length > 0 && (
             <>
               <Select value={selectedPipelineId} onValueChange={setSelectedPipelineId}>
