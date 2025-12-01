@@ -1,5 +1,8 @@
 project_id = "onhnxxweldxjzhoaiwgq"
 
+[functions.create-tenant-with-admin]
+verify_jwt = false
+
 [functions.create-user]
 verify_jwt = false
 

@@ -65,13 +65,6 @@ const Login = () => {
             {loading ? "Entrando..." : "Entrar"}
           </Button>
         </form>
-
-        <div className="mt-6 text-center text-sm">
-          <span className="text-muted-foreground">Não tem uma conta? </span>
-          <Link to="/signup" className="text-primary font-semibold hover:underline">
-            Criar conta
-          </Link>
-        </div>
       </Card>
     </div>
   );
