@@ -4,6 +4,7 @@ import WebhookSettings from './settings/WebhookSettings';
 import ApiKeySettings from './settings/ApiKeySettings';
 import TagSettings from './settings/TagSettings';
 import UserSettings from './settings/UserSettings';
+import CategorySettings from './settings/CategorySettings';
 import { useUserRole } from '@/hooks/useUserRole';
 
 export default function Settings() {
@@ -23,6 +24,7 @@ export default function Settings() {
         <TabsList>
           <TabsTrigger value="custom-fields">Campos Personalizados</TabsTrigger>
           <TabsTrigger value="tags">Tags</TabsTrigger>
+          <TabsTrigger value="categories">Categorias</TabsTrigger>
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           <TabsTrigger value="api">API</TabsTrigger>
           {isAdmin && <TabsTrigger value="users">Usuários</TabsTrigger>}
@@ -34,6 +36,10 @@ export default function Settings() {
 
         <TabsContent value="tags">
           <TagSettings />
+        </TabsContent>
+
+        <TabsContent value="categories">
+          <CategorySettings />
         </TabsContent>
 
         <TabsContent value="webhooks">

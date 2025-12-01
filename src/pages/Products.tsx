@@ -42,8 +42,38 @@ import { useProductImages } from '@/hooks/useProductImages';
 import { useToast } from '@/hooks/use-toast';
 import ProductVariationStockManager from '@/components/ProductVariationStockManager';
 import { useCustomFields } from '@/hooks/useCustomFields';
+import { CategorySelector } from '@/components/CategorySelector';
+import { useProductCategories } from '@/hooks/useProductCategories';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+// Componente auxiliar para exibir categorias de um produto
+const ProductCategoriesCell = ({ productId }: { productId: string }) => {
+  const { productCategories } = useProductCategories(productId);
+  
+  if (productCategories.length === 0) {
+    return <span className="text-muted-foreground">-</span>;
+  }
+  
+  return (
+    <div className="flex flex-wrap gap-1">
+      {productCategories.slice(0, 2).map((category) => (
+        <Badge
+          key={category.id}
+          className="text-white text-xs"
+          style={{ backgroundColor: category.color || '#64748b' }}
+        >
+          {category.name}
+        </Badge>
+      ))}
+      {productCategories.length > 2 && (
+        <Badge variant="outline" className="text-xs">
+          +{productCategories.length - 2}
+        </Badge>
+      )}
+    </div>
+  );
+};
 
 export default function Products() {
   const { toast } = useToast();
@@ -56,9 +86,11 @@ export default function Products() {
   const [pendingImages, setPendingImages] = useState<PendingImage[]>([]);
   const [imagesToDelete, setImagesToDelete] = useState<Array<{id: string, storagePath: string}>>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   
   const { images: existingImages, uploadImages, deleteImage, setPrimaryImage } = useProductImages(editingProduct?.id);
   const { customFields } = useCustomFields('product', editingProduct?.id ?? undefined);
+  const { productCategories, setProductCategories } = useProductCategories(editingProduct?.id);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -67,7 +99,6 @@ export default function Products() {
     cost: 0,
     sku: '',
     stock: 0,
-    category: '',
     is_active: true,
   });
 
@@ -81,7 +112,6 @@ export default function Products() {
         cost: product.cost || 0,
         sku: product.sku || '',
         stock: product.stock || 0,
-        category: product.category || '',
         is_active: product.is_active,
       });
     } else {
@@ -93,9 +123,9 @@ export default function Products() {
         cost: 0,
         sku: '',
         stock: 0,
-        category: '',
         is_active: true,
       });
+      setSelectedCategoryIds([]);
     }
     setIsDialogOpen(true);
   };
@@ -105,6 +135,7 @@ export default function Products() {
     setEditingProduct(null);
     setPendingImages([]);
     setImagesToDelete([]);
+    setSelectedCategoryIds([]);
   };
 
   // Limpar previews ao desmontar
@@ -113,6 +144,13 @@ export default function Products() {
       pendingImages.forEach((img) => URL.revokeObjectURL(img.preview));
     };
   }, [pendingImages]);
+
+  // Carregar categorias do produto ao editar
+  useEffect(() => {
+    if (editingProduct && productCategories.length > 0) {
+      setSelectedCategoryIds(productCategories.map(cat => cat.id));
+    }
+  }, [editingProduct, productCategories]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,7 +168,6 @@ export default function Products() {
         price: Number(formData.price),
         cost: formData.cost ? Number(formData.cost) : null,
         sku: formData.sku || null,
-        category: formData.category || null,
         description: formData.description || null,
       };
 
@@ -155,6 +192,14 @@ export default function Products() {
         // Criar produto e aguardar resposta
         const newProduct = await createProductAsync(data);
         productId = newProduct.id;
+      }
+
+      // Atualizar categorias do produto
+      if (productId) {
+        await setProductCategories.mutateAsync({
+          productId,
+          categoryIds: selectedCategoryIds,
+        });
       }
 
       // Upload de imagens pendentes (apenas se houver imagens comprimidas)
@@ -197,8 +242,7 @@ export default function Products() {
 
   const filteredProducts = products?.filter((product) =>
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.sku?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.category?.toLowerCase().includes(searchQuery.toLowerCase())
+    product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const copyProductUrl = (slug: string) => {
@@ -226,7 +270,7 @@ export default function Products() {
       <SearchInput
         value={searchQuery}
         onChange={setSearchQuery}
-        placeholder="Buscar por nome, SKU ou categoria..."
+        placeholder="Buscar por nome ou SKU..."
       />
 
       <DataTableWrapper>
@@ -235,7 +279,7 @@ export default function Products() {
             <TableRow>
               <TableHead>Produto</TableHead>
               <TableHead>SKU</TableHead>
-              <TableHead>Categoria</TableHead>
+              <TableHead>Categorias</TableHead>
               <TableHead>Preço</TableHead>
               <TableHead>Custo</TableHead>
               <TableHead>Estoque</TableHead>
@@ -278,11 +322,7 @@ export default function Products() {
                     )}
                   </TableCell>
                   <TableCell>
-                    {product.category ? (
-                      <Badge variant="outline">{product.category}</Badge>
-                    ) : (
-                      <span className="text-muted-foreground">-</span>
-                    )}
+                    <ProductCategoriesCell productId={product.id} />
                   </TableCell>
                   <TableCell className="font-medium">
                     R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -436,12 +476,11 @@ export default function Products() {
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="category">Categoria</Label>
-                <Input
-                  id="category"
-                  value={formData.category}
-                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              <div className="col-span-2 space-y-2">
+                <Label>Categorias</Label>
+                <CategorySelector
+                  selectedCategoryIds={selectedCategoryIds}
+                  onChange={setSelectedCategoryIds}
                 />
               </div>
 
