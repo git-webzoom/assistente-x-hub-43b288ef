@@ -8,7 +8,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { 
       status: 200,
@@ -17,7 +16,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Creating user - Request received');
+    console.log('[CREATE-USER] Request received');
     
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
@@ -30,10 +29,9 @@ serve(async (req) => {
       }
     );
 
-    // Verificar autenticação
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('No authorization header');
+      console.error('[CREATE-USER] No authorization header');
       return new Response(
         JSON.stringify({ error: 'Não autorizado - header de autenticação ausente' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -44,16 +42,15 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
-      console.error('Auth error:', authError);
+      console.error('[CREATE-USER] Auth error:', authError);
       return new Response(
         JSON.stringify({ error: 'Não autorizado' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('User authenticated:', user.id);
+    console.log('[CREATE-USER] User authenticated:', user.id);
 
-    // Verificar se usuário é admin
     const { data: roleData, error: roleError } = await supabaseClient
       .from('user_roles')
       .select('role')
@@ -61,16 +58,15 @@ serve(async (req) => {
       .single();
 
     if (roleError || !roleData || (roleData.role !== 'admin' && roleData.role !== 'superadmin')) {
-      console.error('Role check failed:', roleError, roleData);
+      console.error('[CREATE-USER] Role check failed:', { roleError, roleData });
       return new Response(
         JSON.stringify({ error: 'Acesso negado. Apenas administradores podem criar usuários.' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('User role verified:', roleData.role);
+    console.log('[CREATE-USER] User role verified:', roleData.role);
 
-    // Obter tenant do admin
     const { data: adminData, error: adminError } = await supabaseClient
       .from('users')
       .select('tenant_id')
@@ -78,19 +74,19 @@ serve(async (req) => {
       .single();
 
     if (adminError || !adminData?.tenant_id) {
-      console.error('Tenant check failed:', adminError);
+      console.error('[CREATE-USER] Tenant check failed:', adminError);
       return new Response(
         JSON.stringify({ error: 'Tenant não encontrado' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Tenant verified:', adminData.tenant_id);
+    console.log('[CREATE-USER] Tenant verified:', adminData.tenant_id);
 
     const { email, role, name, password } = await req.json();
 
     if (!email || !role) {
-      console.error('Missing required fields');
+      console.error('[CREATE-USER] Missing required fields');
       return new Response(
         JSON.stringify({ error: 'Email e role são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -98,16 +94,15 @@ serve(async (req) => {
     }
 
     if (!password) {
-      console.error('Missing password');
+      console.error('[CREATE-USER] Missing password');
       return new Response(
         JSON.stringify({ error: 'Senha é obrigatória' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Creating user with email:', email);
+    console.log('[CREATE-USER] Creating user with email:', email);
 
-    // Criar usuário
     const { data: newUser, error: createError } = await supabaseClient.auth.admin.createUser({
       email,
       password,
@@ -118,16 +113,15 @@ serve(async (req) => {
     });
 
     if (createError) {
-      console.error('User creation error:', createError);
+      console.error('[CREATE-USER] User creation error:', createError);
       return new Response(
-        JSON.stringify({ error: createError.message }),
+        JSON.stringify({ error: `Erro ao criar usuário no Auth: ${createError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('User created in auth:', newUser.user.id);
+    console.log('[CREATE-USER] User created in auth:', newUser.user.id);
 
-    // Adicionar usuário ao tenant
     const { error: usersError } = await supabaseClient
       .from('users')
       .insert({
@@ -138,16 +132,15 @@ serve(async (req) => {
       });
 
     if (usersError) {
-      console.error('Error adding user to users table:', usersError);
+      console.error('[CREATE-USER] Error adding user to users table:', usersError);
       return new Response(
-        JSON.stringify({ error: `Erro ao adicionar usuário: ${usersError.message}` }),
+        JSON.stringify({ error: `Erro ao adicionar usuário na tabela users: ${usersError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('User added to users table');
+    console.log('[CREATE-USER] User added to users table');
 
-    // Adicionar role
     const { error: roleInsertError } = await supabaseClient
       .from('user_roles')
       .insert({
@@ -156,14 +149,14 @@ serve(async (req) => {
       });
 
     if (roleInsertError) {
-      console.error('Error adding user role:', roleInsertError);
+      console.error('[CREATE-USER] Error adding user role:', roleInsertError);
       return new Response(
         JSON.stringify({ error: `Erro ao adicionar role: ${roleInsertError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('User role added successfully');
+    console.log('[CREATE-USER] User role added successfully');
 
     return new Response(
       JSON.stringify({ 
@@ -173,10 +166,10 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Unexpected error:', error);
+    console.error('[CREATE-USER] Unexpected error:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: `Erro inesperado: ${errorMessage}` }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
