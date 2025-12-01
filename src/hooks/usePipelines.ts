@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export interface Pipeline {
   id: string;
@@ -15,51 +16,33 @@ export const usePipelines = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
 
   const { data: pipelines, isLoading } = useQuery({
-    queryKey: ["pipelines", user?.id],
+    queryKey: ["pipelines", currentUser?.tenant_id],
     queryFn: async () => {
-      if (!user?.id) return [];
-
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .single();
-
-      if (userError) throw userError;
-      const tenantId = userData?.tenant_id;
-      if (!tenantId) return [];
+      if (!currentUser?.tenant_id) return [];
 
       const { data, error } = await supabase
         .from("pipelines")
         .select("*")
-        .eq("tenant_id", tenantId)
+        .eq("tenant_id", currentUser.tenant_id)
         .order("created_at", { ascending: true });
 
       if (error) throw error;
       return data as Pipeline[];
     },
-    enabled: !!user?.id,
+    enabled: !!currentUser?.tenant_id,
+    staleTime: 5 * 60 * 1000, // 5 minutos
   });
 
   const createPipeline = useMutation({
     mutationFn: async (name: string) => {
-      if (!user?.id) throw new Error("User not authenticated");
-
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .single();
-
-      if (userError) throw userError;
-      const tenantId = userData?.tenant_id;
-      if (!tenantId) throw new Error("Tenant not found");
+      if (!user?.id || !currentUser?.tenant_id) throw new Error("User not authenticated");
 
       const { data, error } = await supabase
         .from("pipelines")
-        .insert({ name, tenant_id: tenantId })
+        .insert({ name, tenant_id: currentUser.tenant_id })
         .select()
         .single();
 

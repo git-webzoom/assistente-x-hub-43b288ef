@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { useCurrentUser } from './useCurrentUser';
 
 export interface User {
   id: string;
@@ -11,25 +12,17 @@ export interface User {
 
 export const useUsers = (searchQuery?: string) => {
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
 
   const { data: users, isLoading } = useQuery({
-    queryKey: ['users', user?.id, searchQuery],
+    queryKey: ['users', currentUser?.tenant_id, searchQuery],
     queryFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      // Get user's tenant_id
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) throw new Error('Tenant not found');
+      if (!currentUser?.tenant_id) throw new Error('Tenant not found');
 
       let query = supabase
         .from('users')
         .select('id, email, name, tenant_id')
-        .eq('tenant_id', userData.tenant_id)
+        .eq('tenant_id', currentUser.tenant_id)
         .order('name', { ascending: true, nullsFirst: false });
 
       // Apply search filter if provided
@@ -42,7 +35,8 @@ export const useUsers = (searchQuery?: string) => {
       if (error) throw error;
       return data as User[];
     },
-    enabled: !!user?.id,
+    enabled: !!currentUser?.tenant_id,
+    staleTime: 5 * 60 * 1000, // 5 minutos
   });
 
   return {

@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { useCurrentUser } from './useCurrentUser';
 import { useToast } from '@/hooks/use-toast';
 import { dispatchWebhookFromClient } from '@/lib/webhookClient';
 
@@ -22,11 +23,12 @@ export interface Product {
 
 export const useProducts = () => {
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: products, isLoading } = useQuery({
-    queryKey: ['products'],
+    queryKey: ['products', currentUser?.tenant_id],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
@@ -36,23 +38,17 @@ export const useProducts = () => {
       if (error) throw error;
       return data as Product[];
     },
+    enabled: !!currentUser?.tenant_id,
+    staleTime: 5 * 60 * 1000, // 5 minutos
   });
 
   const createProduct = useMutation({
     mutationFn: async (product: Omit<Product, 'id' | 'tenant_id' | 'slug' | 'created_at' | 'updated_at'>) => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) throw new Error('Tenant not found');
+      if (!user?.id || !currentUser?.tenant_id) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
         .from('products')
-        .insert([{ ...product, tenant_id: userData.tenant_id }])
+        .insert([{ ...product, tenant_id: currentUser.tenant_id }])
         .select()
         .single();
 
@@ -63,7 +59,7 @@ export const useProducts = () => {
         event: 'product.created',
         entity: 'product',
         data,
-        tenant_id: userData.tenant_id,
+        tenant_id: currentUser.tenant_id,
         user_id: user.id,
       });
 

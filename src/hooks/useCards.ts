@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { dispatchWebhookFromClient } from "@/lib/webhookClient";
 
 export interface Tag {
@@ -34,6 +35,7 @@ export const useCards = (pipelineId?: string) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
 
   const { data: cards, isLoading } = useQuery({
     queryKey: ["cards", pipelineId],
@@ -67,6 +69,7 @@ export const useCards = (pipelineId?: string) => {
       return data as Card[];
     },
     enabled: !!pipelineId,
+    staleTime: 2 * 60 * 1000, // 2 minutos
   });
 
   const createCard = useMutation({
@@ -85,22 +88,12 @@ export const useCards = (pipelineId?: string) => {
       position: number;
       description?: string;
     }) => {
-      if (!user?.id) throw new Error("User not authenticated");
-
-      const { data: userData, error: userError } = await supabase
-        .from("users")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .single();
-
-      if (userError) throw userError;
-      const tenantId = userData?.tenant_id;
-      if (!tenantId) throw new Error("Tenant not found");
+      if (!user?.id || !currentUser?.tenant_id) throw new Error("User not authenticated");
 
       const { data, error } = await supabase
         .from("cards")
         .insert({
-          tenant_id: tenantId,
+          tenant_id: currentUser.tenant_id,
           pipeline_id: pipelineId,
           stage_id: stageId,
           title,
@@ -119,7 +112,7 @@ export const useCards = (pipelineId?: string) => {
         event: "card.created",
         entity: "card",
         data,
-        tenant_id: tenantId,
+        tenant_id: currentUser.tenant_id,
         user_id: user.id,
       });
 

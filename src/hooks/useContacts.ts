@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { useCurrentUser } from './useCurrentUser';
 import { toast } from '@/hooks/use-toast';
 import { dispatchWebhookFromClient } from '@/lib/webhookClient';
 
@@ -20,26 +21,18 @@ export interface Contact {
 
 export const useContacts = (searchQuery?: string) => {
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
 
   const { data: contacts, isLoading, error } = useQuery({
-    queryKey: ['contacts', user?.id, searchQuery],
+    queryKey: ['contacts', currentUser?.tenant_id, searchQuery],
     queryFn: async () => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      // Get user's tenant_id
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) throw new Error('Tenant not found');
+      if (!currentUser?.tenant_id) throw new Error('Tenant not found');
 
       let query = supabase
         .from('contacts')
         .select('*')
-        .eq('tenant_id', userData.tenant_id)
+        .eq('tenant_id', currentUser.tenant_id)
         .order('created_at', { ascending: false });
 
       // Apply search filter if provided
@@ -52,26 +45,19 @@ export const useContacts = (searchQuery?: string) => {
       if (error) throw error;
       return data as Contact[];
     },
-    enabled: !!user?.id,
+    enabled: !!currentUser?.tenant_id,
+    staleTime: 3 * 60 * 1000, // 3 minutos
   });
 
   const createContact = useMutation({
     mutationFn: async (newContact: Omit<Contact, 'id' | 'created_at' | 'updated_at' | 'tenant_id' | 'tags'>) => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) throw new Error('Tenant not found');
+      if (!user?.id || !currentUser?.tenant_id) throw new Error('User not authenticated');
 
       const { tags, ...contactData } = newContact as any;
 
       const { data, error } = await supabase
         .from('contacts')
-        .insert([{ ...contactData, tenant_id: userData.tenant_id }])
+        .insert([{ ...contactData, tenant_id: currentUser.tenant_id }])
         .select()
         .single();
 
@@ -82,7 +68,7 @@ export const useContacts = (searchQuery?: string) => {
         event: 'contact.created',
         entity: 'contact',
         data,
-        tenant_id: userData.tenant_id,
+        tenant_id: currentUser.tenant_id,
         user_id: user.id,
       });
 

@@ -1,26 +1,20 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { useCurrentUser } from './useCurrentUser';
 import { useEffect } from 'react';
 
 export const useRecentActivity = () => {
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
+  const queryClient = useQueryClient();
 
-  const { data: activities, isLoading, refetch } = useQuery({
-    queryKey: ['recent-activity', user?.id],
+  const { data: activities, isLoading } = useQuery({
+    queryKey: ['recent-activity', currentUser?.tenant_id],
     queryFn: async () => {
-      if (!user?.id) return [];
+      if (!currentUser?.tenant_id) return [];
 
-      // Get user's tenant_id
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id, name')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) return [];
-
-      const tenantId = userData.tenant_id;
+      const tenantId = currentUser.tenant_id;
 
       // Fetch recent contacts (last 10)
       const { data: recentContacts } = await supabase
@@ -74,33 +68,68 @@ export const useRecentActivity = () => {
         .sort((a, b) => b.timestamp - a.timestamp)
         .slice(0, 5);
     },
-    enabled: !!user?.id,
+    enabled: !!currentUser?.tenant_id,
+    staleTime: 60 * 1000, // 1 minuto
   });
 
-  // Set up real-time subscription
+  // Set up real-time subscription with optimized cache updates
   useEffect(() => {
-    if (!user?.id) return;
+    if (!currentUser?.tenant_id) return;
 
     const channel = supabase
       .channel('dashboard-updates')
       .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'contacts' },
-        () => refetch()
+        { event: 'INSERT', schema: 'public', table: 'contacts' },
+        (payload) => {
+          // Atualizar cache incrementalmente ao invés de refetch total
+          queryClient.setQueryData(['recent-activity', currentUser.tenant_id], (old: any[]) => {
+            if (!old) return old;
+            const newActivity = {
+              action: 'Novo contato adicionado',
+              user: payload.new.name,
+              time: 'há poucos segundos',
+              timestamp: Date.now()
+            };
+            return [newActivity, ...old].slice(0, 5);
+          });
+        }
       )
       .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'tasks' },
-        () => refetch()
+        { event: 'UPDATE', schema: 'public', table: 'tasks', filter: 'status=eq.completed' },
+        (payload) => {
+          queryClient.setQueryData(['recent-activity', currentUser.tenant_id], (old: any[]) => {
+            if (!old) return old;
+            const newActivity = {
+              action: 'Tarefa concluída',
+              user: payload.new.title,
+              time: 'há poucos segundos',
+              timestamp: Date.now()
+            };
+            return [newActivity, ...old].slice(0, 5);
+          });
+        }
       )
       .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'appointments' },
-        () => refetch()
+        { event: 'INSERT', schema: 'public', table: 'appointments' },
+        (payload) => {
+          queryClient.setQueryData(['recent-activity', currentUser.tenant_id], (old: any[]) => {
+            if (!old) return old;
+            const newActivity = {
+              action: 'Compromisso agendado',
+              user: payload.new.title,
+              time: 'há poucos segundos',
+              timestamp: Date.now()
+            };
+            return [newActivity, ...old].slice(0, 5);
+          });
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, refetch]);
+  }, [currentUser?.tenant_id, queryClient]);
 
   return { activities: activities || [], isLoading };
 };

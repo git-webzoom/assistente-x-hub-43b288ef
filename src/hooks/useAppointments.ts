@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
+import { useCurrentUser } from './useCurrentUser';
 import { useToast } from '@/hooks/use-toast';
 import { dispatchWebhookFromClient } from '@/lib/webhookClient';
 
@@ -25,11 +26,12 @@ export interface Appointment {
 
 export const useAppointments = () => {
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: appointments, isLoading } = useQuery({
-    queryKey: ['appointments'],
+    queryKey: ['appointments', currentUser?.tenant_id],
     queryFn: async () => {
       // Primeiro tenta buscar com join
       const { data: appointmentsWithContact, error: errorWithJoin } = await supabase
@@ -71,23 +73,17 @@ export const useAppointments = () => {
 
       return appointmentsWithoutContact as Appointment[];
     },
+    enabled: !!currentUser?.tenant_id,
+    staleTime: 2 * 60 * 1000, // 2 minutos
   });
 
   const createAppointment = useMutation({
     mutationFn: async (appointment: Omit<Appointment, 'id' | 'tenant_id' | 'created_at' | 'updated_at' | 'contact'>) => {
-      if (!user?.id) throw new Error('User not authenticated');
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('tenant_id')
-        .eq('id', user.id)
-        .single();
-
-      if (!userData?.tenant_id) throw new Error('Tenant not found');
+      if (!user?.id || !currentUser?.tenant_id) throw new Error('User not authenticated');
 
       const { data, error } = await supabase
         .from('appointments')
-        .insert([{ ...appointment, tenant_id: userData.tenant_id }])
+        .insert([{ ...appointment, tenant_id: currentUser.tenant_id }])
         .select()
         .single();
 
@@ -98,7 +94,7 @@ export const useAppointments = () => {
         event: 'appointment.created',
         entity: 'appointment',
         data,
-        tenant_id: userData.tenant_id,
+        tenant_id: currentUser.tenant_id,
         user_id: user.id,
       });
 
