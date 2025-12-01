@@ -8,16 +8,17 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
-    return new Response(null, { 
+    return new Response(null, {
       status: 200,
-      headers: corsHeaders 
+      headers: corsHeaders,
     });
   }
 
   try {
     console.log('[CREATE-USER] Request received');
-    
+
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -29,6 +30,7 @@ serve(async (req) => {
       }
     );
 
+    // 1) Autenticação
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       console.error('[CREATE-USER] No authorization header');
@@ -39,7 +41,10 @@ serve(async (req) => {
     }
 
     const token = authHeader.replace('Bearer ', '');
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseClient.auth.getUser(token);
 
     if (authError || !user) {
       console.error('[CREATE-USER] Auth error:', authError);
@@ -51,6 +56,7 @@ serve(async (req) => {
 
     console.log('[CREATE-USER] User authenticated:', user.id);
 
+    // 2) Verificar se é admin/superadmin
     const { data: roleData, error: roleError } = await supabaseClient
       .from('user_roles')
       .select('role')
@@ -67,6 +73,7 @@ serve(async (req) => {
 
     console.log('[CREATE-USER] User role verified:', roleData.role);
 
+    // 3) Obter tenant do admin
     const { data: adminData, error: adminError } = await supabaseClient
       .from('users')
       .select('tenant_id')
@@ -83,6 +90,7 @@ serve(async (req) => {
 
     console.log('[CREATE-USER] Tenant verified:', adminData.tenant_id);
 
+    // 4) Validar body
     const { email, role, name, password } = await req.json();
 
     if (!email || !role) {
@@ -103,6 +111,7 @@ serve(async (req) => {
 
     console.log('[CREATE-USER] Creating user with email:', email);
 
+    // 5) Criar usuário no Auth
     const { data: newUser, error: createError } = await supabaseClient.auth.admin.createUser({
       email,
       password,
@@ -113,23 +122,30 @@ serve(async (req) => {
     });
 
     if (createError) {
-      console.error('[CREATE-USER] User creation error:', createError);
+      console.error('[CREATE-USER] User creation error (auth):', createError);
       return new Response(
         JSON.stringify({ error: `Erro ao criar usuário no Auth: ${createError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    if (!newUser || !newUser.user) {
+      console.error('[CREATE-USER] Auth returned no user object');
+      return new Response(
+        JSON.stringify({ error: 'Erro ao criar usuário: resposta inválida do Auth' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     console.log('[CREATE-USER] User created in auth:', newUser.user.id);
 
-    const { error: usersError } = await supabaseClient
-      .from('users')
-      .insert({
-        id: newUser.user.id,
-        email,
-        name: name || email.split('@')[0],
-        tenant_id: adminData.tenant_id,
-      });
+    // 6) Inserir na tabela users (perfil)
+    const { error: usersError } = await supabaseClient.from('users').insert({
+      id: newUser.user.id,
+      email,
+      name: name || email.split('@')[0],
+      tenant_id: adminData.tenant_id,
+    });
 
     if (usersError) {
       console.error('[CREATE-USER] Error adding user to users table:', usersError);
@@ -141,26 +157,33 @@ serve(async (req) => {
 
     console.log('[CREATE-USER] User added to users table');
 
-    const { error: roleInsertError } = await supabaseClient
+    // 7) Definir role na tabela user_roles
+    // IMPORTANTE: já existe um trigger (handle_new_user_role) que insere role "user" por padrão
+    // e a tabela user_roles tem unique(user_id). Então um INSERT simples gera erro de unique_violation.
+    // Usamos UPSERT com onConflict='user_id' para atualizar/forçar a role desejada.
+    const { error: roleUpsertError } = await supabaseClient
       .from('user_roles')
-      .insert({
-        user_id: newUser.user.id,
-        role,
-      });
+      .upsert(
+        {
+          user_id: newUser.user.id,
+          role,
+        },
+        { onConflict: 'user_id' }
+      );
 
-    if (roleInsertError) {
-      console.error('[CREATE-USER] Error adding user role:', roleInsertError);
+    if (roleUpsertError) {
+      console.error('[CREATE-USER] Error upserting user role:', roleUpsertError);
       return new Response(
-        JSON.stringify({ error: `Erro ao adicionar role: ${roleInsertError.message}` }),
+        JSON.stringify({ error: `Erro ao definir role na tabela user_roles: ${roleUpsertError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[CREATE-USER] User role added successfully');
+    console.log('[CREATE-USER] User role set successfully');
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
+      JSON.stringify({
+        success: true,
         user: newUser.user,
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
