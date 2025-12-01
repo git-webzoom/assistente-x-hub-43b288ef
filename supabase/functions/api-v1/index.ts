@@ -2241,17 +2241,20 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    // Remove both possible prefixes: /v1/ or just the function path
-    let pathname = url.pathname;
-    
-    // Remove leading slashes and split
-    const pathParts = pathname.replace(/^\/+/, '').split('/').filter(Boolean);
-    
-    // If first part is 'v1', skip it
-    const path = pathParts[0] === 'v1' ? pathParts.slice(1) : pathParts;
+    const pathname = url.pathname;
+
+    // Ex.: /functions/v1/api-v1/contacts ou /functions/v1/api-v1/v1/contacts
+    const segments = pathname.replace(/^\/+/, '').split('/').filter(Boolean);
+
+    // Encontrar o índice da própria função (api-v1) e pegar só o que vem depois
+    const apiIndex = segments.findIndex((s) => s === 'api-v1');
+    const apiPathSegments = apiIndex >= 0 ? segments.slice(apiIndex + 1) : segments;
+
+    // Suportar opcionalmente prefixo /v1
+    const path = apiPathSegments[0] === 'v1' ? apiPathSegments.slice(1) : apiPathSegments;
     const resource = path[0];
-    
-    console.log('API Request:', { pathname: url.pathname, resource, path });
+
+    console.log('API Request', { pathname: url.pathname, segments, path, resource });
 
     let response: Response;
 
