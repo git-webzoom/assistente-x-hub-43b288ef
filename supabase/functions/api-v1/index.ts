@@ -1500,14 +1500,7 @@ async function handleCards(req: Request, ctx: AuthContext, path: string[]): Prom
       const tagFilter = url.searchParams.get('tag');
       const ownerFilter = url.searchParams.get('owner_id');
 
-      if (!stageId && !pipelineId) {
-        return new Response(JSON.stringify({ error: 'Either stage_id or pipeline_id query parameter is required' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
-      }
-
-      let stageIds = [];
+      let stageIds: string[] = [];
 
       if (stageId) {
         stageIds = [stageId];
@@ -1555,6 +1548,33 @@ async function handleCards(req: Request, ctx: AuthContext, path: string[]): Prom
           .from('stages')
           .select('id')
           .eq('pipeline_id', pipelineId);
+
+        stageIds = stages?.map(s => s.id) || [];
+
+        if (stageIds.length === 0) {
+          return new Response(JSON.stringify(formatResponse([], { total: 0, limit: pagination.limit, next_cursor: null })), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      } else {
+        // Nenhum filtro fornecido - buscar todos os cards do tenant
+        const { data: pipelines } = await ctx.supabase
+          .from('pipelines')
+          .select('id')
+          .eq('tenant_id', ctx.tenantId);
+
+        const pipelineIds = pipelines?.map(p => p.id) || [];
+
+        if (pipelineIds.length === 0) {
+          return new Response(JSON.stringify(formatResponse([], { total: 0, limit: pagination.limit, next_cursor: null })), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const { data: stages } = await ctx.supabase
+          .from('stages')
+          .select('id')
+          .in('pipeline_id', pipelineIds);
 
         stageIds = stages?.map(s => s.id) || [];
 
