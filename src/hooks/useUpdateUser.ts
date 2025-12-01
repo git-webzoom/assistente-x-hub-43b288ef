@@ -2,24 +2,18 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from './use-toast';
 
-interface CreateUserParams {
+interface UpdateUserParams {
+  userId: string;
   email: string;
   role: 'superadmin' | 'admin' | 'supervisor' | 'user';
   name?: string;
-  password?: string;
 }
 
-interface CreateUserResponse {
-  success: boolean;
-  user: any;
-  tempPassword: string;
-}
-
-export const useCreateUser = () => {
+export const useUpdateUser = () => {
   const queryClient = useQueryClient();
 
-  const createUser = useMutation({
-    mutationFn: async (params: CreateUserParams) => {
+  const updateUser = useMutation({
+    mutationFn: async (params: UpdateUserParams) => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -27,7 +21,7 @@ export const useCreateUser = () => {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user`,
         {
           method: 'POST',
           headers: {
@@ -40,24 +34,22 @@ export const useCreateUser = () => {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Erro ao criar usuário');
+        throw new Error(error.error || 'Erro ao atualizar usuário');
       }
 
-      return await response.json() as CreateUserResponse;
+      return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['users-with-permissions'] });
       
       toast({
-        title: 'Usuário criado com sucesso',
-        description: data.tempPassword ? `Senha temporária: ${data.tempPassword}` : undefined,
-        duration: 10000,
+        title: 'Usuário atualizado com sucesso',
       });
     },
     onError: (error: any) => {
       toast({
-        title: 'Erro ao criar usuário',
+        title: 'Erro ao atualizar usuário',
         description: error.message,
         variant: 'destructive',
       });
@@ -65,7 +57,7 @@ export const useCreateUser = () => {
   });
 
   return {
-    createUser: createUser.mutate,
-    isCreating: createUser.isPending,
+    updateUser: updateUser.mutate,
+    isUpdating: updateUser.isPending,
   };
 };

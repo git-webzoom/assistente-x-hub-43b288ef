@@ -7,6 +7,9 @@ export interface UserWithPermissions {
   id: string;
   email: string;
   name: string | null;
+  tenant_id: string;
+  role: string;
+  is_banned: boolean;
   permissions: {
     entity_key: string;
     can_view: boolean;
@@ -39,7 +42,14 @@ export const useManageUserPermissions = () => {
       // Get all users in tenant
       const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('id, email, name')
+        .select(`
+          id, 
+          email, 
+          name, 
+          tenant_id,
+          banned_until,
+          user_roles!inner(role)
+        `)
         .eq('tenant_id', userData.tenant_id)
         .order('name', { ascending: true, nullsFirst: false });
 
@@ -54,8 +64,13 @@ export const useManageUserPermissions = () => {
       if (permError) throw permError;
 
       // Combine data
-      const usersWithPerms: UserWithPermissions[] = users?.map(u => ({
-        ...u,
+      const usersWithPerms: UserWithPermissions[] = users?.map((u: any) => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        tenant_id: u.tenant_id,
+        role: u.user_roles?.[0]?.role || 'user',
+        is_banned: u.banned_until ? new Date(u.banned_until) > new Date() : false,
         permissions: permissions?.filter(p => p.user_id === u.id).map(p => ({
           entity_key: p.entity_key,
           can_view: p.can_view,

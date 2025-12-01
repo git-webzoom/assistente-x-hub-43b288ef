@@ -44,7 +44,7 @@ serve(async (req) => {
 
     if (roleError || !roleData || (roleData.role !== 'admin' && roleData.role !== 'superadmin')) {
       return new Response(
-        JSON.stringify({ error: 'Acesso negado. Apenas administradores podem criar usuários.' }),
+        JSON.stringify({ error: 'Acesso negado. Apenas administradores podem resetar senhas.' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -63,58 +63,51 @@ serve(async (req) => {
       );
     }
 
-    const { email, role, name, password } = await req.json();
+    const { userId, newPassword } = await req.json();
 
-    if (!email || !role) {
+    if (!userId || !newPassword) {
       return new Response(
-        JSON.stringify({ error: 'Email e role são obrigatórios' }),
+        JSON.stringify({ error: 'userId e newPassword são obrigatórios' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Usar senha fornecida ou gerar temporária
-    const tempPassword = password || `Temp${Math.random().toString(36).slice(-8)}!`;
-    
-    const { data: newUser, error: createError } = await supabaseClient.auth.admin.createUser({
-      email,
-      password: tempPassword,
-      email_confirm: true,
-      user_metadata: {
-        name: name || email.split('@')[0],
-      },
-    });
-
-    if (createError) {
+    if (newPassword.length < 6) {
       return new Response(
-        JSON.stringify({ error: createError.message }),
+        JSON.stringify({ error: 'A senha deve ter no mínimo 6 caracteres' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Adicionar usuário ao tenant
-    await supabaseClient
+    // Verificar se o usuário pertence ao mesmo tenant
+    const { data: targetUser } = await supabaseClient
       .from('users')
-      .insert({
-        id: newUser.user.id,
-        email,
-        name: name || email.split('@')[0],
-        tenant_id: adminData.tenant_id,
-      });
+      .select('tenant_id')
+      .eq('id', userId)
+      .single();
 
-    // Adicionar role
-    await supabaseClient
-      .from('user_roles')
-      .insert({
-        user_id: newUser.user.id,
-        role,
-      });
+    if (!targetUser || targetUser.tenant_id !== adminData.tenant_id) {
+      return new Response(
+        JSON.stringify({ error: 'Usuário não encontrado ou não pertence ao seu tenant' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Resetar senha
+    const { error: resetError } = await supabaseClient.auth.admin.updateUserById(
+      userId,
+      { password: newPassword }
+    );
+
+    if (resetError) {
+      return new Response(
+        JSON.stringify({ error: resetError.message }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        user: newUser.user,
-        tempPassword: password ? undefined : tempPassword, // Só retorna se foi auto-gerada
-      }),
+      JSON.stringify({ success: true }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
