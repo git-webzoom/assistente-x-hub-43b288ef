@@ -139,28 +139,30 @@ serve(async (req) => {
 
     console.log('[CREATE-USER] User created in auth:', newUser.user.id);
 
-    // 6) Inserir na tabela users (perfil)
-    const { error: usersError } = await supabaseClient.from('users').insert({
-      id: newUser.user.id,
-      email,
-      name: name || email.split('@')[0],
-      tenant_id: adminData.tenant_id,
-    });
+    // 6) Inserir/atualizar na tabela users (perfil) usando UPSERT para evitar duplicate key
+    const { error: usersError } = await supabaseClient
+      .from('users')
+      .upsert(
+        {
+          id: newUser.user.id,
+          email,
+          name: name || email.split('@')[0],
+          tenant_id: adminData.tenant_id,
+        },
+        { onConflict: 'id' }
+      );
 
     if (usersError) {
-      console.error('[CREATE-USER] Error adding user to users table:', usersError);
+      console.error('[CREATE-USER] Error upserting user in users table:', usersError);
       return new Response(
         JSON.stringify({ error: `Erro ao adicionar usuário na tabela users: ${usersError.message}` }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('[CREATE-USER] User added to users table');
+    console.log('[CREATE-USER] User upserted in users table');
 
     // 7) Definir role na tabela user_roles
-    // IMPORTANTE: já existe um trigger (handle_new_user_role) que insere role "user" por padrão
-    // e a tabela user_roles tem unique(user_id). Então um INSERT simples gera erro de unique_violation.
-    // Usamos UPSERT com onConflict='user_id' para atualizar/forçar a role desejada.
     const { error: roleUpsertError } = await supabaseClient
       .from('user_roles')
       .upsert(
