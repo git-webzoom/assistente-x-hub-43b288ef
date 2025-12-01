@@ -4,8 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User, RefreshCw } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { User, RefreshCw, Edit, KeyRound, Ban, CheckCircle } from 'lucide-react';
 import { CreateUserDialog } from '@/components/CreateUserDialog';
+import { EditUserDialog } from '@/components/EditUserDialog';
+import { ResetPasswordDialog } from '@/components/ResetPasswordDialog';
+import { useToggleUserStatus } from '@/hooks/useToggleUserStatus';
 import {
   Accordion,
   AccordionContent,
@@ -29,9 +33,19 @@ const ACTION_LABELS: Record<string, string> = {
   can_delete: 'Excluir',
 };
 
+const ROLE_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  superadmin: { label: 'Super Admin', variant: 'destructive' },
+  admin: { label: 'Admin', variant: 'default' },
+  supervisor: { label: 'Supervisor', variant: 'secondary' },
+  user: { label: 'Usuário', variant: 'outline' },
+};
+
 export function UserPermissionsManager() {
   const { usersWithPermissions, isLoading, updatePermission, resetPermissions, availableEntities } = useManageUserPermissions();
+  const { toggleStatus, isToggling } = useToggleUserStatus();
   const [expandedUser, setExpandedUser] = useState<string>('');
+  const [editingUser, setEditingUser] = useState<{ id: string; email: string; name: string | null; role: string } | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<{ id: string; email: string; name: string | null } | null>(null);
 
   if (isLoading) {
     return (
@@ -69,6 +83,13 @@ export function UserPermissionsManager() {
     }
   };
 
+  const handleToggleStatus = (userId: string, currentlyBanned: boolean) => {
+    const action = currentlyBanned ? 'ativar' : 'desativar';
+    if (confirm(`Tem certeza que deseja ${action} este usuário?`)) {
+      toggleStatus({ userId, enable: currentlyBanned });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -95,15 +116,57 @@ export function UserPermissionsManager() {
                 <AccordionItem key={user.id} value={user.id}>
                   <AccordionTrigger className="hover:no-underline">
                     <div className="flex items-center justify-between w-full pr-4">
-                      <div className="flex flex-col items-start">
-                        <span className="font-medium">{user.name || user.email}</span>
+                      <div className="flex flex-col items-start gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{user.name || user.email}</span>
+                          <Badge variant={ROLE_LABELS[user.role]?.variant || 'outline'}>
+                            {ROLE_LABELS[user.role]?.label || user.role}
+                          </Badge>
+                          {user.is_banned && (
+                            <Badge variant="destructive">Desativado</Badge>
+                          )}
+                        </div>
                         <span className="text-sm text-muted-foreground">{user.email}</span>
                       </div>
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="space-y-4 pt-4">
-                      <div className="flex justify-end">
+                      <div className="flex justify-end gap-2 flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setEditingUser({ id: user.id, email: user.email, name: user.name, role: user.role })}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setResetPasswordUser({ id: user.id, email: user.email, name: user.name })}
+                        >
+                          <KeyRound className="h-4 w-4 mr-2" />
+                          Resetar Senha
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleStatus(user.id, user.is_banned)}
+                          disabled={isToggling}
+                        >
+                          {user.is_banned ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 mr-2" />
+                              Ativar
+                            </>
+                          ) : (
+                            <>
+                              <Ban className="h-4 w-4 mr-2" />
+                              Desativar
+                            </>
+                          )}
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
@@ -159,6 +222,22 @@ export function UserPermissionsManager() {
           )}
         </CardContent>
       </Card>
+
+      {editingUser && (
+        <EditUserDialog
+          open={!!editingUser}
+          onOpenChange={(open) => !open && setEditingUser(null)}
+          user={editingUser}
+        />
+      )}
+
+      {resetPasswordUser && (
+        <ResetPasswordDialog
+          open={!!resetPasswordUser}
+          onOpenChange={(open) => !open && setResetPasswordUser(null)}
+          user={resetPasswordUser}
+        />
+      )}
     </div>
   );
 }

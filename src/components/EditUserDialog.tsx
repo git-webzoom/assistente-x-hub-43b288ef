@@ -1,51 +1,60 @@
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserPlus } from 'lucide-react';
-import { useCreateUser } from '@/hooks/useCreateUser';
+import { useUpdateUser } from '@/hooks/useUpdateUser';
 import { z } from 'zod';
 
 const userSchema = z.object({
   email: z.string().email('Email inválido'),
   name: z.string().min(2, 'Nome deve ter ao menos 2 caracteres').optional(),
-  password: z.string().min(6, 'Senha deve ter ao menos 6 caracteres'),
   role: z.enum(['superadmin', 'admin', 'supervisor', 'user'], { required_error: 'Selecione uma role' }),
 });
 
 type RoleType = 'superadmin' | 'admin' | 'supervisor' | 'user';
 
-export function CreateUserDialog() {
-  const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [name, setName] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState<RoleType>('user');
+interface EditUserDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  user: {
+    id: string;
+    email: string;
+    name: string | null;
+    role: string;
+  };
+}
+
+export function EditUserDialog({ open, onOpenChange, user }: EditUserDialogProps) {
+  const [email, setEmail] = useState(user.email);
+  const [name, setName] = useState(user.name || '');
+  const [role, setRole] = useState<RoleType>(user.role as RoleType);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { createUser, isCreating } = useCreateUser();
+  const { updateUser, isUpdating } = useUpdateUser();
+
+  useEffect(() => {
+    setEmail(user.email);
+    setName(user.name || '');
+    setRole(user.role as RoleType);
+  }, [user]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
 
     try {
-      const validated = userSchema.parse({ email, name: name || undefined, password, role });
+      const validated = userSchema.parse({ email, name: name || undefined, role });
       
-      createUser({
+      updateUser({
+        userId: user.id,
         email: validated.email,
         role: validated.role,
         name: validated.name,
-        password: validated.password,
       }, {
         onSuccess: () => {
-          setOpen(false);
-          setEmail('');
-          setName('');
-          setPassword('');
-          setRole('user');
+          onOpenChange(false);
         },
       });
     } catch (error) {
@@ -62,22 +71,16 @@ export function CreateUserDialog() {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button>
-          <UserPlus className="mr-2 h-4 w-4" />
-          Criar Usuário
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Criar Novo Usuário</DialogTitle>
+          <DialogTitle>Editar Usuário</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email *</Label>
+            <Label htmlFor="edit-email">Email *</Label>
             <Input
-              id="email"
+              id="edit-email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -90,9 +93,9 @@ export function CreateUserDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="name">Nome</Label>
+            <Label htmlFor="edit-name">Nome</Label>
             <Input
-              id="name"
+              id="edit-name"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -104,22 +107,7 @@ export function CreateUserDialog() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Senha *</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
-              required
-            />
-            {errors.password && (
-              <p className="text-sm text-destructive">{errors.password}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="role">Role *</Label>
+            <Label htmlFor="edit-role">Role *</Label>
             <Select value={role} onValueChange={(value: RoleType) => setRole(value)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a role" />
@@ -140,13 +128,13 @@ export function CreateUserDialog() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
-              disabled={isCreating}
+              onClick={() => onOpenChange(false)}
+              disabled={isUpdating}
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isCreating}>
-              {isCreating ? 'Criando...' : 'Criar Usuário'}
+            <Button type="submit" disabled={isUpdating}>
+              {isUpdating ? 'Salvando...' : 'Salvar'}
             </Button>
           </div>
         </form>

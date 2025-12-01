@@ -2,24 +2,16 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { toast } from './use-toast';
 
-interface CreateUserParams {
-  email: string;
-  role: 'superadmin' | 'admin' | 'supervisor' | 'user';
-  name?: string;
-  password?: string;
+interface ToggleUserStatusParams {
+  userId: string;
+  enable: boolean;
 }
 
-interface CreateUserResponse {
-  success: boolean;
-  user: any;
-  tempPassword: string;
-}
-
-export const useCreateUser = () => {
+export const useToggleUserStatus = () => {
   const queryClient = useQueryClient();
 
-  const createUser = useMutation({
-    mutationFn: async (params: CreateUserParams) => {
+  const toggleStatus = useMutation({
+    mutationFn: async (params: ToggleUserStatusParams) => {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
@@ -27,7 +19,7 @@ export const useCreateUser = () => {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-user`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/toggle-user-status`,
         {
           method: 'POST',
           headers: {
@@ -40,24 +32,22 @@ export const useCreateUser = () => {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Erro ao criar usuário');
+        throw new Error(error.error || 'Erro ao alterar status do usuário');
       }
 
-      return await response.json() as CreateUserResponse;
+      return await response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['users-with-permissions'] });
       
       toast({
-        title: 'Usuário criado com sucesso',
-        description: data.tempPassword ? `Senha temporária: ${data.tempPassword}` : undefined,
-        duration: 10000,
+        title: variables.enable ? 'Usuário ativado com sucesso' : 'Usuário desativado com sucesso',
       });
     },
     onError: (error: any) => {
       toast({
-        title: 'Erro ao criar usuário',
+        title: 'Erro ao alterar status',
         description: error.message,
         variant: 'destructive',
       });
@@ -65,7 +55,7 @@ export const useCreateUser = () => {
   });
 
   return {
-    createUser: createUser.mutate,
-    isCreating: createUser.isPending,
+    toggleStatus: toggleStatus.mutate,
+    isToggling: toggleStatus.isPending,
   };
 };
