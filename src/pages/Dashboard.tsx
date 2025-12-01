@@ -40,23 +40,32 @@ const Dashboard = () => {
   const { isSuperAdmin } = useUserRole();
   const { routes, isLoading: routesLoading } = useEntityRoutes();
 
-  // Converter rotas dinâmicas para formato do menu e adicionar Super Admin
-  const menuItems = isSuperAdmin 
-    ? [
-        ...routes.map(route => ({
-          key: route.key,
-          icon: route.icon,
-          label: route.label,
-          path: `/dashboard/${route.slug}`,
-        })),
-        { key: 'superadmin', icon: 'Shield', label: "Super Admin", path: "/dashboard/superadmin" }
-      ]
-    : routes.map(route => ({
-        key: route.key,
-        icon: route.icon,
-        label: route.label,
-        path: `/dashboard/${route.slug}`,
-      }));
+  // Menus fixos que sempre aparecem
+  const fixedMenus = [
+    { key: 'home', icon: 'LayoutDashboard', label: 'Dashboard', path: '/dashboard' },
+  ];
+
+  // Menus dinâmicos das entidades
+  const entityMenus = routes.map(route => ({
+    key: route.key,
+    icon: route.icon,
+    label: route.label,
+    path: `/dashboard/${route.slug}`,
+  }));
+
+  // Menus de configuração
+  const settingsMenus = [
+    { key: 'api-docs', icon: 'BookOpen', label: 'API Docs', path: '/dashboard/api-docs' },
+    { key: 'settings', icon: 'Settings', label: 'Configurações', path: '/dashboard/settings' },
+  ];
+
+  // Menu Super Admin (apenas para superadmins)
+  const adminMenus = isSuperAdmin 
+    ? [{ key: 'superadmin', icon: 'Shield', label: 'Super Admin', path: '/dashboard/superadmin' }]
+    : [];
+
+  // Combinar todos os menus
+  const menuItems = [...fixedMenus, ...entityMenus, ...settingsMenus, ...adminMenus];
 
   return (
     <div className="flex h-screen bg-background">

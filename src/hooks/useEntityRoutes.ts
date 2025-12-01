@@ -26,29 +26,38 @@ export function useEntityRoutes() {
     queryFn: async () => {
       if (!currentUser?.tenant_id) return [];
 
-      // Buscar rotas do tenant ou globais (tenant_id IS NULL)
-      const { data, error } = await supabase
-        .from('entity_routes')
-        .select('*')
-        .or(`tenant_id.is.null,tenant_id.eq.${currentUser.tenant_id}`)
-        .eq('is_active', true)
-        .order('order_index', { ascending: true });
+      try {
+        // Buscar rotas do tenant ou globais (tenant_id IS NULL)
+        const { data, error } = await supabase
+          .from('entity_routes')
+          .select('*')
+          .or(`tenant_id.is.null,tenant_id.eq.${currentUser.tenant_id}`)
+          .eq('is_active', true)
+          .order('order_index', { ascending: true });
 
-      if (error) throw error;
+        if (error) {
+          // Se a tabela não existir ainda, retornar array vazio silenciosamente
+          console.warn('entity_routes table not found, using fallback menus');
+          return [];
+        }
 
-      // Filtrar rotas baseado em:
-      // 1. Tenant menu settings (enabledMenus)
-      // 2. User entity permissions
-      const filteredRoutes = (data as EntityRoute[]).filter((route) => {
-        // Verificar se o menu está habilitado no tenant
-        const isMenuEnabled = enabledMenus.some(menu => menu.key === route.key);
-        if (!isMenuEnabled) return false;
+        // Filtrar rotas baseado em:
+        // 1. Tenant menu settings (enabledMenus)
+        // 2. User entity permissions
+        const filteredRoutes = (data as EntityRoute[]).filter((route) => {
+          // Verificar se o menu está habilitado no tenant
+          const isMenuEnabled = enabledMenus.some(menu => menu.key === route.key);
+          if (!isMenuEnabled) return false;
 
-        // Verificar se o usuário tem permissão de view para esta entidade
-        return hasPermission(route.key, 'view');
-      });
+          // Verificar se o usuário tem permissão de view para esta entidade
+          return hasPermission(route.key, 'view');
+        });
 
-      return filteredRoutes;
+        return filteredRoutes;
+      } catch (err) {
+        console.warn('Error fetching entity routes:', err);
+        return [];
+      }
     },
     enabled: !!currentUser?.tenant_id,
     staleTime: 5 * 60 * 1000, // 5 minutos
