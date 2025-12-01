@@ -83,7 +83,7 @@ export const useCards = (pipelineId?: string) => {
       if (error) throw error;
       return data as Card[];
     },
-    enabled: !!pipelineId && !!role && !!user?.id,
+    enabled: !!pipelineId && !!user?.id,
     staleTime: 2 * 60 * 1000, // 2 minutos
   });
 
