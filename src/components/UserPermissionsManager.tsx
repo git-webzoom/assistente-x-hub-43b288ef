@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { User, RefreshCw } from 'lucide-react';
+import { CreateUserDialog } from '@/components/CreateUserDialog';
 import {
   Accordion,
   AccordionContent,
@@ -72,13 +73,18 @@ export function UserPermissionsManager() {
     <div className="space-y-4">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Gerenciar Permissões de Usuários
-          </CardTitle>
-          <CardDescription>
-            Configure quais funcionalidades cada usuário pode acessar
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-5 w-5" />
+                Gerenciar Permissões de Usuários
+              </CardTitle>
+              <CardDescription>
+                Configure quais funcionalidades cada usuário pode acessar
+              </CardDescription>
+            </div>
+            <CreateUserDialog />
+          </div>
         </CardHeader>
         <CardContent>
           {usersWithPermissions.length === 0 ? (
