@@ -55,7 +55,6 @@ const Dashboard = () => {
 
   // Menus de configuração
   const settingsMenus = [
-    { key: 'api-docs', icon: 'BookOpen', label: 'API Docs', path: '/dashboard/api-docs' },
     { key: 'settings', icon: 'Settings', label: 'Configurações', path: '/dashboard/settings' },
   ];
 
