@@ -40,15 +40,18 @@ import {
 } from '@/components/ui/popover';
 import { useAppointments, type Appointment } from '@/hooks/useAppointments';
 import { useContacts } from '@/hooks/useContacts';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { CustomFieldsSection } from '@/components/CustomFieldsSection';
 import { ContactSelect } from '@/components/ContactSelect';
+import { UserSelect } from '@/components/UserSelect';
 
 export default function Calendar() {
   const { appointments, isLoading, createAppointment, updateAppointment, deleteAppointment } =
     useAppointments();
   const { contacts } = useContacts();
+  const { isSupervisor } = useUserRole();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -60,6 +63,7 @@ export default function Calendar() {
     title: string;
     description: string;
     contact_id: string;
+    owner_id: string;
     start_time: string;
     end_time: string;
     location: string;
@@ -68,6 +72,7 @@ export default function Calendar() {
     title: '',
     description: '',
     contact_id: '',
+    owner_id: '',
     start_time: '',
     end_time: '',
     location: '',
@@ -85,6 +90,7 @@ export default function Calendar() {
         title: appointment.title,
         description: appointment.description || '',
         contact_id: appointment.contact_id || '',
+        owner_id: appointment.owner_id || '',
         start_time: startTimeStr,
         end_time: endTimeStr,
         location: appointment.location || '',
@@ -99,6 +105,7 @@ export default function Calendar() {
         title: '',
         description: '',
         contact_id: '',
+        owner_id: '',
         start_time: startTime,
         end_time: endTime,
         location: '',
@@ -119,6 +126,7 @@ export default function Calendar() {
     const data = {
       ...formData,
       contact_id: formData.contact_id && formData.contact_id !== 'none' ? formData.contact_id : null,
+      owner_id: formData.owner_id || null,
       description: formData.description || null,
       location: formData.location || null,
     };
@@ -564,6 +572,20 @@ export default function Calendar() {
                   </Select>
                 </div>
               </div>
+
+              {isSupervisor && (
+                <div className="space-y-2">
+                  <Label htmlFor="owner_id">Proprietário</Label>
+                  <UserSelect
+                    value={formData.owner_id || undefined}
+                    onChange={(value) => setFormData({ ...formData, owner_id: value || '' })}
+                    placeholder="Selecionar proprietário..."
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Se não selecionado, você será o proprietário.
+                  </p>
+                </div>
+              )}
 
               <CustomFieldsSection
                 entityType="appointment"

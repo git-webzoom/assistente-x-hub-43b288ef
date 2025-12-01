@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { useCurrentUser } from './useCurrentUser';
+import { useUserRole } from './useUserRole';
 import { useToast } from '@/hooks/use-toast';
 import { dispatchWebhookFromClient } from '@/lib/webhookClient';
 
@@ -9,6 +10,7 @@ export interface Appointment {
   id: string;
   tenant_id: string;
   contact_id: string | null;
+  owner_id: string | null;
   title: string;
   description: string | null;
   start_time: string;
@@ -22,24 +24,38 @@ export interface Appointment {
     name: string;
     email: string | null;
   };
+  owner?: {
+    id: string;
+    name: string;
+    email: string | null;
+  };
 }
 
 export const useAppointments = () => {
   const { user } = useAuth();
   const { currentUser } = useCurrentUser();
+  const { role } = useUserRole();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const { data: appointments, isLoading } = useQuery({
-    queryKey: ['appointments', currentUser?.tenant_id],
+    queryKey: ['appointments', currentUser?.tenant_id, role, user?.id],
     queryFn: async () => {
       // Primeiro tenta buscar com join
-      const { data: appointmentsWithContact, error: errorWithJoin } = await supabase
+      let query = supabase
         .from('appointments')
         .select(`
           *,
-          contact:contacts(id, name, email)
-        `)
+          contact:contacts(id, name, email),
+          owner:users!owner_id(id, name, email)
+        `);
+      
+      // Usuário normal só vê suas próprias agendas
+      if (role === 'user') {
+        query = query.eq('owner_id', user!.id);
+      }
+      
+      const { data: appointmentsWithContact, error: errorWithJoin } = await query
         .order('start_time', { ascending: true });
 
       // Se deu certo, retorna
@@ -48,9 +64,16 @@ export const useAppointments = () => {
       }
 
       // Se falhou por causa do relacionamento, busca sem join
-      const { data: appointmentsWithoutContact, error: errorWithoutJoin } = await supabase
+      let fallbackQuery = supabase
         .from('appointments')
-        .select('*')
+        .select('*');
+      
+      // Aplicar filtro por role também no fallback
+      if (role === 'user') {
+        fallbackQuery = fallbackQuery.eq('owner_id', user!.id);
+      }
+      
+      const { data: appointmentsWithoutContact, error: errorWithoutJoin } = await fallbackQuery
         .order('start_time', { ascending: true });
 
       if (errorWithoutJoin) throw errorWithoutJoin;
@@ -73,17 +96,24 @@ export const useAppointments = () => {
 
       return appointmentsWithoutContact as Appointment[];
     },
-    enabled: !!currentUser?.tenant_id,
+    enabled: !!currentUser?.tenant_id && !!role && !!user?.id,
     staleTime: 2 * 60 * 1000, // 2 minutos
   });
 
   const createAppointment = useMutation({
-    mutationFn: async (appointment: Omit<Appointment, 'id' | 'tenant_id' | 'created_at' | 'updated_at' | 'contact'>) => {
+    mutationFn: async (appointment: Omit<Appointment, 'id' | 'tenant_id' | 'created_at' | 'updated_at' | 'contact' | 'owner'>) => {
       if (!user?.id || !currentUser?.tenant_id) throw new Error('User not authenticated');
+
+      // Auto-atribuir ao próprio usuário se não especificado
+      const appointmentData = {
+        ...appointment,
+        tenant_id: currentUser.tenant_id,
+        owner_id: appointment.owner_id || user.id,
+      };
 
       const { data, error } = await supabase
         .from('appointments')
-        .insert([{ ...appointment, tenant_id: currentUser.tenant_id }])
+        .insert([appointmentData])
         .select()
         .single();
 
