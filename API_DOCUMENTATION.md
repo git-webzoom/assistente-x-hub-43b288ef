@@ -221,8 +221,16 @@ GET /v1/products
 ```
 
 **Parâmetros de Query:**
-- `limit`, `cursor` - Paginação
-- Filtros: `name`, `sku`, `price_gte`, `price_lte`, `stock_gte`, etc.
+- `limit` (opcional): Número de registros por página (padrão: 50, máximo: 100)
+- `cursor` (opcional): Cursor para paginação
+- Filtros disponíveis:
+  - `name`, `name_like` - Nome do produto
+  - `sku`, `sku_like` - Código SKU
+  - `category` - ID da categoria (UUID)
+  - `category_name` - Nome da categoria (busca parcial)
+  - `price_gte`, `price_lte` - Faixa de preço
+  - `stock_quantity_gte`, `stock_quantity_lte` - Faixa de estoque
+  - `custom_fields.campo` - Filtros em campos personalizados
 
 **Resposta:**
 ```json
@@ -237,7 +245,14 @@ GET /v1/products
       "price": 99.90,
       "cost": 50.00,
       "stock": 100,
-      "category": "Categoria 1",
+      "categories": [
+        {
+          "id": "uuid-categoria",
+          "name": "Eletrônicos",
+          "description": "Produtos eletrônicos",
+          "color": "#3b82f6"
+        }
+      ],
       "custom_fields": {},
       "created_at": "2025-01-15T10:00:00.000Z",
       "updated_at": "2025-01-15T10:00:00.000Z"
@@ -268,9 +283,14 @@ POST /v1/products
   "price": 99.90,
   "cost": 50.00,
   "stock": 100,
-  "category": "Categoria 1"
+  "category_ids": ["uuid-categoria-1", "uuid-categoria-2"],
+  "custom_fields": {
+    "garantia": "12 meses"
+  }
 }
 ```
+
+**Nota:** O campo `category_ids` é opcional e pode conter múltiplos IDs de categoria.
 
 **Webhook disparado:** `product.created`
 
@@ -279,6 +299,17 @@ POST /v1/products
 PUT /v1/products/:id
 PATCH /v1/products/:id
 ```
+
+**Body (exemplo parcial com PATCH):**
+```json
+{
+  "price": 89.90,
+  "stock": 95,
+  "category_ids": ["uuid-categoria-1"]
+}
+```
+
+**Nota:** Se `category_ids` for fornecido, todas as categorias antigas serão substituídas pelas novas.
 
 **Webhook disparado:** `product.updated`
 
@@ -300,7 +331,7 @@ GET /v1/appointments
 
 **Parâmetros de Query:**
 - `limit`, `cursor` - Paginação
-- Filtros: `title`, `status`, `start_date_gte`, `start_date_lte`, etc.
+- Filtros: `title`, `title_like`, `status`, `owner_id`, `contact_id`, `start_time_gte`, `start_time_lte`, etc.
 
 **Resposta:**
 ```json
@@ -311,11 +342,12 @@ GET /v1/appointments
       "tenant_id": "uuid",
       "title": "Reunião com Cliente",
       "description": "Discussão sobre proposta",
-      "start_date": "2025-01-20T14:00:00.000Z",
-      "end_date": "2025-01-20T15:00:00.000Z",
+      "start_time": "2025-01-20T14:00:00.000Z",
+      "end_time": "2025-01-20T15:00:00.000Z",
       "location": "Sala 3",
       "status": "scheduled",
       "contact_id": "uuid",
+      "owner_id": "uuid-do-proprietario",
       "custom_fields": {},
       "created_at": "2025-01-15T10:00:00.000Z",
       "updated_at": "2025-01-15T10:00:00.000Z"
@@ -342,13 +374,16 @@ POST /v1/appointments
 {
   "title": "Reunião com Cliente",
   "description": "Discussão sobre proposta",
-  "start_date": "2025-01-20T14:00:00.000Z",
-  "end_date": "2025-01-20T15:00:00.000Z",
+  "start_time": "2025-01-20T14:00:00.000Z",
+  "end_time": "2025-01-20T15:00:00.000Z",
   "location": "Sala 3",
   "status": "scheduled",
-  "contact_id": "uuid"
+  "contact_id": "uuid",
+  "owner_id": "uuid-do-proprietario"
 }
 ```
+
+**Nota:** O campo `owner_id` é opcional. Se não fornecido, o criador será automaticamente atribuído como proprietário.
 
 **Webhook disparado:** `appointment.created`
 
@@ -378,7 +413,7 @@ GET /v1/tasks
 
 **Parâmetros de Query:**
 - `limit`, `cursor` - Paginação
-- Filtros: `title`, `status`, `priority`, `due_date_lte`, etc.
+- Filtros: `title`, `title_like`, `status`, `priority`, `owner_id`, `contact_id`, `due_date_gte`, `due_date_lte`, etc.
 
 **Resposta:**
 ```json
@@ -393,7 +428,7 @@ GET /v1/tasks
       "priority": "high",
       "due_date": "2025-01-18T17:00:00.000Z",
       "completed_at": null,
-      "assigned_to": "uuid",
+      "owner_id": "uuid-do-proprietario",
       "contact_id": "uuid",
       "custom_fields": {},
       "created_at": "2025-01-15T10:00:00.000Z",
@@ -424,10 +459,12 @@ POST /v1/tasks
   "status": "pending",
   "priority": "high",
   "due_date": "2025-01-18T17:00:00.000Z",
-  "assigned_to": "uuid",
+  "owner_id": "uuid-do-proprietario",
   "contact_id": "uuid"
 }
 ```
+
+**Nota:** O campo `owner_id` é opcional. Se não fornecido, o criador será automaticamente atribuído como proprietário.
 
 **Webhook disparado:** `task.created`
 
@@ -593,6 +630,7 @@ GET /v1/cards?pipeline_id=uuid&stage_id=uuid
       "description": "Venda de 100 licenças",
       "value": 50000.00,
       "contact_id": "uuid",
+      "owner_id": "uuid-do-proprietario",
       "position": 0,
       "custom_fields": {},
       "created_at": "2025-01-15T10:00:00.000Z",
@@ -624,9 +662,12 @@ POST /v1/cards
   "description": "Venda de 100 licenças",
   "value": 50000.00,
   "contact_id": "uuid",
+  "owner_id": "uuid-do-proprietario",
   "position": 0
 }
 ```
+
+**Nota:** O campo `owner_id` é opcional. Se não fornecido, o criador será automaticamente atribuído como proprietário.
 
 **Webhook disparado:** `card.created`
 
@@ -667,6 +708,8 @@ A API dispara webhooks automaticamente para eventos de criação, atualização 
 - `pipeline.created`, `pipeline.updated`, `pipeline.deleted`
 - `stage.created`, `stage.updated`, `stage.deleted`
 - `card.created`, `card.updated`, `card.deleted`
+- `tag.created`, `tag.updated`, `tag.deleted`
+- `category.created`, `category.updated`, `category.deleted`
 
 **Headers do Webhook:**
 ```
@@ -860,10 +903,143 @@ Para dúvidas ou problemas:
 
 ---
 
+---
+
+### 8. Tags
+
+#### Listar Tags
+```http
+GET /v1/tags
+```
+
+#### Obter Tag por ID
+```http
+GET /v1/tags/:id
+```
+
+#### Criar Tag
+```http
+POST /v1/tags
+```
+
+**Body:**
+```json
+{
+  "name": "Cliente VIP",
+  "color": "#10b981"
+}
+```
+
+**Webhook disparado:** `tag.created`
+
+#### Atualizar Tag
+```http
+PUT /v1/tags/:id
+PATCH /v1/tags/:id
+```
+
+**Webhook disparado:** `tag.updated`
+
+#### Deletar Tag
+```http
+DELETE /v1/tags/:id
+```
+
+**Webhook disparado:** `tag.deleted`
+
+---
+
+### 9. Categorias (Categories)
+
+#### Listar Categorias
+```http
+GET /v1/categories
+```
+
+**Parâmetros de Query:**
+- `limit`, `cursor` - Paginação
+- Filtros: `name`, `name_like`, `color`
+
+**Resposta:**
+```json
+{
+  "data": [
+    {
+      "id": "uuid-da-categoria",
+      "tenant_id": "uuid-do-tenant",
+      "name": "Eletrônicos",
+      "description": "Produtos eletrônicos",
+      "color": "#3b82f6",
+      "created_at": "2025-01-15T10:00:00.000Z",
+      "updated_at": "2025-01-15T10:00:00.000Z"
+    }
+  ],
+  "meta": {
+    "timestamp": "2025-01-15T10:00:00.000Z",
+    "pagination": {
+      "total": 25,
+      "limit": 50,
+      "next_cursor": null
+    }
+  }
+}
+```
+
+#### Obter Categoria por ID
+```http
+GET /v1/categories/:id
+```
+
+#### Criar Categoria
+```http
+POST /v1/categories
+```
+
+**Body:**
+```json
+{
+  "name": "Eletrônicos",
+  "description": "Produtos eletrônicos",
+  "color": "#3b82f6"
+}
+```
+
+**Webhook disparado:** `category.created`
+
+#### Atualizar Categoria
+```http
+PUT /v1/categories/:id
+PATCH /v1/categories/:id
+```
+
+**Body (exemplo parcial com PATCH):**
+```json
+{
+  "name": "Eletrônicos e Tecnologia",
+  "color": "#0ea5e9"
+}
+```
+
+**Webhook disparado:** `category.updated`
+
+#### Deletar Categoria
+```http
+DELETE /v1/categories/:id
+```
+
+**Webhook disparado:** `category.deleted`
+
+**Nota:** Ao deletar uma categoria, as relações com produtos serão automaticamente removidas, mas os produtos não serão excluídos.
+
+---
+
 ## Changelog
 
 ### Versão 1.0.0 (Atual)
 - API REST completa para todos os recursos
+- Endpoints completos para Contatos, Produtos, Agendamentos, Tarefas, Pipelines, Estágios, Cards, Tags e Categorias
+- Produtos agora suportam múltiplas categorias (many-to-many)
+- Tasks, Appointments e Cards agora incluem campo `owner_id`
 - Autenticação via API Key
 - Paginação baseada em cursor
 - Filtros avançados
