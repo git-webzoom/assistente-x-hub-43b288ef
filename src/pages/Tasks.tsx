@@ -46,7 +46,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 export default function Tasks() {
   const { tasks, isLoading, createTask, updateTask, deleteTask } = useTasks();
   const { contacts } = useContacts();
-  const { role } = useUserRole();
+  const { isSupervisor } = useUserRole();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -383,7 +383,7 @@ export default function Tasks() {
                 />
               </div>
 
-              {(role === 'admin' || role === 'superadmin') && (
+              {isSupervisor && (
                 <div className="space-y-2">
                   <Label htmlFor="assigned_to">Responsável</Label>
                   <UserSelect
