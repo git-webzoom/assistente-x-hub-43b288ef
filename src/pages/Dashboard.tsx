@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   LayoutDashboard,
   Users,
@@ -10,17 +9,16 @@ import {
   Settings,
   LogOut,
   Bell,
-  Search,
-  BookOpen,
   Shield,
 } from "lucide-react";
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useTenantMenus } from "@/hooks/useTenantMenus";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import BrandLogo from "@/components/BrandLogo";
+import { GlobalSearchDialog } from "@/components/GlobalSearchDialog";
+import { UserProfileMenu } from "@/components/UserProfileMenu";
 
 // Mapeamento de ícones
 const iconMap: Record<string, any> = {
@@ -96,21 +94,14 @@ const Dashboard = () => {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
         <header className="h-16 border-b bg-card/50 backdrop-blur-sm flex items-center justify-between px-6">
-          <div className="flex items-center gap-4 flex-1 max-w-xl">
-            <Search className="w-5 h-5 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Buscar contatos, cards, tarefas..."
-              className="border-0 focus-visible:ring-0"
-            />
-          </div>
+          <GlobalSearchDialog />
 
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <Button variant="ghost" size="icon">
               <Bell className="w-5 h-5" />
             </Button>
-            <div className="w-10 h-10 rounded-full bg-gradient-hero" />
+            <UserProfileMenu />
           </div>
         </header>
 
