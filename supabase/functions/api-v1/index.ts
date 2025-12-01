@@ -1,5 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+
+// ============= TypeScript Interfaces =============
+
+interface AuthContext {
+  tenantId: string;
+  apiKeyId: string;
+  supabase: SupabaseClient;
+}
+
+interface Pagination {
+  limit: number;
+  cursor?: string;
+}
+
+interface PaginationMeta {
+  total: number | null;
+  limit: number;
+  next_cursor: string | null;
+}
+
+interface ApiResponse {
+  data: unknown;
+  meta: {
+    timestamp: string;
+    pagination?: PaginationMeta;
+  };
+  links?: Record<string, string>;
+}
+
+interface Filters {
+  [key: string]: string;
+}
+
+// ============= CORS Headers =============
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,8 +41,9 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
 };
 
-// Helper: Authenticate request
-async function authenticate(req, supabase) {
+// ============= Helper Functions =============
+
+async function authenticate(req: Request, supabase: SupabaseClient): Promise<AuthContext | null> {
   const apiKey = req.headers.get('x-api-key');
   if (!apiKey) {
     return null;
@@ -44,20 +79,18 @@ async function authenticate(req, supabase) {
   };
 }
 
-// Helper: Parse pagination params
-function parsePagination(url) {
+function parsePagination(url: URL): Pagination {
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 100);
   const cursor = url.searchParams.get('cursor') || undefined;
   return { limit, cursor };
 }
 
-// Helper: Parse filters
-function parseFilters(url) {
-  const filters = {};
+function parseFilters(url: URL): Filters {
+  const filters: Filters = {};
   const params = url.searchParams;
   
   for (const [key, value] of params.entries()) {
-    if (!['limit', 'cursor', 'include', 'tag'].includes(key)) {
+    if (!['limit', 'cursor', 'include', 'tag', 'category', 'category_name', 'owner_id'].includes(key)) {
       if (key.startsWith('custom_fields.')) {
         const fieldName = key.substring('custom_fields.'.length);
         filters[`custom_fields->${fieldName}`] = value;
@@ -69,8 +102,8 @@ function parseFilters(url) {
   return filters;
 }
 
-// Helper: Build query with filters
-function applyFilters(query, filters) {
+// deno-lint-ignore no-explicit-any
+function applyFilters(query: any, filters: Filters): any {
   for (const [key, value] of Object.entries(filters)) {
     if (key.includes('->')) {
       query = query.filter(key, 'eq', value);
@@ -87,20 +120,31 @@ function applyFilters(query, filters) {
   return query;
 }
 
-// Helper: Format tags from joined data
-function formatTags(item, tagRelationKey) {
+// deno-lint-ignore no-explicit-any
+function formatTags(item: any, tagRelationKey: string): any {
   if (!item[tagRelationKey]) return item;
   
   const tags = item[tagRelationKey]
-    .map(ct => ct.tags)
+    .map((ct: any) => ct.tags)
     .filter(Boolean);
   
   const { [tagRelationKey]: _, ...rest } = item;
   return { ...rest, tags };
 }
 
-// Helper: Trigger webhooks
-async function triggerWebhooks(supabase, tenantId, eventType, payload) {
+// deno-lint-ignore no-explicit-any
+function formatProductCategories(product: any): any {
+  if (!product?.product_categories) return product;
+  
+  const categories = product.product_categories
+    .map((pc: any) => pc.categories)
+    .filter(Boolean);
+  
+  const { product_categories: _, ...rest } = product;
+  return { ...rest, categories };
+}
+
+async function triggerWebhooks(supabase: SupabaseClient, tenantId: string, eventType: string, payload: unknown): Promise<void> {
   try {
     const { data: webhooks } = await supabase
       .from('webhooks')
@@ -151,8 +195,7 @@ async function triggerWebhooks(supabase, tenantId, eventType, payload) {
   }
 }
 
-// Helper: Format response with metadata
-function formatResponse(data, pagination, links) {
+function formatResponse(data: unknown, pagination?: PaginationMeta | null, links?: Record<string, string> | null): ApiResponse {
   return {
     data,
     meta: {
@@ -163,13 +206,13 @@ function formatResponse(data, pagination, links) {
   };
 }
 
-// CRUD Handlers for Contacts
-async function handleContacts(req, ctx, path) {
+// ============= CRUD Handlers for Contacts =============
+
+async function handleContacts(req: Request, ctx: AuthContext, path: string[]): Promise<Response> {
   const url = new URL(req.url);
   const method = req.method;
   const id = path[1];
 
-  // Check for nested routes
   if (id && path[2] === 'tags') {
     return handleContactTags(req, ctx, id);
   }
@@ -201,7 +244,6 @@ async function handleContacts(req, ctx, path) {
       let query;
       
       if (tagFilter) {
-        // Filter by tag name
         const { data: tagData } = await ctx.supabase
           .from('tags')
           .select('id')
@@ -215,7 +257,6 @@ async function handleContacts(req, ctx, path) {
           });
         }
 
-        // Get contacts with this tag
         const { data: contactTagsData } = await ctx.supabase
           .from('contact_tags')
           .select('contact_id')
@@ -260,7 +301,8 @@ async function handleContacts(req, ctx, path) {
         });
       }
 
-      const formattedData = data.map(item => formatTags(item, 'contact_tags'));
+      // deno-lint-ignore no-explicit-any
+      const formattedData = data.map((item: any) => formatTags(item, 'contact_tags'));
       const nextCursor = data.length === pagination.limit ? data[data.length - 1].created_at : null;
 
       return new Response(JSON.stringify(formatResponse(formattedData, {
@@ -348,11 +390,9 @@ async function handleContacts(req, ctx, path) {
   });
 }
 
-// Handler for Contact Tags
-async function handleContactTags(req, ctx, contactId) {
+async function handleContactTags(req: Request, ctx: AuthContext, contactId: string): Promise<Response> {
   const method = req.method;
 
-  // Verify contact ownership
   const { data: contact } = await ctx.supabase
     .from('contacts')
     .select('id')
@@ -453,8 +493,9 @@ async function handleContactTags(req, ctx, contactId) {
   });
 }
 
-// Handler for Products
-async function handleProducts(req, ctx, path) {
+// ============= CRUD Handlers for Products (COM CATEGORIAS) =============
+
+async function handleProducts(req: Request, ctx: AuthContext, path: string[]): Promise<Response> {
   const url = new URL(req.url);
   const method = req.method;
   const id = path[1];
@@ -463,7 +504,7 @@ async function handleProducts(req, ctx, path) {
     if (id) {
       const { data, error } = await ctx.supabase
         .from('products')
-        .select('*')
+        .select('*, product_categories(category_id, categories(*))')
         .eq('tenant_id', ctx.tenantId)
         .eq('id', id)
         .single();
@@ -475,19 +516,65 @@ async function handleProducts(req, ctx, path) {
         });
       }
 
-      return new Response(JSON.stringify(formatResponse(data)), {
+      return new Response(JSON.stringify(formatResponse(formatProductCategories(data))), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } else {
       const pagination = parsePagination(url);
       const filters = parseFilters(url);
+      const categoryFilter = url.searchParams.get('category');
+      const categoryNameFilter = url.searchParams.get('category_name');
 
-      let query = ctx.supabase
-        .from('products')
-        .select('*', { count: 'exact' })
-        .eq('tenant_id', ctx.tenantId)
-        .order('created_at', { ascending: false })
-        .limit(pagination.limit);
+      let query;
+      
+      if (categoryFilter || categoryNameFilter) {
+        let categoryId = categoryFilter;
+        
+        if (categoryNameFilter && !categoryId) {
+          const { data: categoryData } = await ctx.supabase
+            .from('categories')
+            .select('id')
+            .eq('tenant_id', ctx.tenantId)
+            .ilike('name', categoryNameFilter)
+            .single();
+
+          if (!categoryData) {
+            return new Response(JSON.stringify(formatResponse([], { total: 0, limit: pagination.limit, next_cursor: null })), {
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          
+          categoryId = categoryData.id;
+        }
+
+        const { data: productCategoriesData } = await ctx.supabase
+          .from('product_categories')
+          .select('product_id')
+          .eq('category_id', categoryId);
+
+        const productIds = productCategoriesData?.map(pc => pc.product_id) || [];
+
+        if (productIds.length === 0) {
+          return new Response(JSON.stringify(formatResponse([], { total: 0, limit: pagination.limit, next_cursor: null })), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        query = ctx.supabase
+          .from('products')
+          .select('*, product_categories(category_id, categories(*))', { count: 'exact' })
+          .eq('tenant_id', ctx.tenantId)
+          .in('id', productIds)
+          .order('created_at', { ascending: false })
+          .limit(pagination.limit);
+      } else {
+        query = ctx.supabase
+          .from('products')
+          .select('*, product_categories(category_id, categories(*))', { count: 'exact' })
+          .eq('tenant_id', ctx.tenantId)
+          .order('created_at', { ascending: false })
+          .limit(pagination.limit);
+      }
 
       query = applyFilters(query, filters);
 
@@ -504,9 +591,11 @@ async function handleProducts(req, ctx, path) {
         });
       }
 
+      // deno-lint-ignore no-explicit-any
+      const formattedData = data.map((item: any) => formatProductCategories(item));
       const nextCursor = data.length === pagination.limit ? data[data.length - 1].created_at : null;
 
-      return new Response(JSON.stringify(formatResponse(data, {
+      return new Response(JSON.stringify(formatResponse(formattedData, {
         total: count,
         limit: pagination.limit,
         next_cursor: nextCursor
@@ -518,9 +607,11 @@ async function handleProducts(req, ctx, path) {
 
   if (method === 'POST') {
     const body = await req.json();
+    const { category_ids, ...productData } = body;
+    
     const { data, error } = await ctx.supabase
       .from('products')
-      .insert({ ...body, tenant_id: ctx.tenantId })
+      .insert({ ...productData, tenant_id: ctx.tenantId })
       .select()
       .single();
 
@@ -531,9 +622,26 @@ async function handleProducts(req, ctx, path) {
       });
     }
 
+    if (category_ids && Array.isArray(category_ids) && category_ids.length > 0) {
+      const productCategories = category_ids.map(categoryId => ({
+        product_id: data.id,
+        category_id: categoryId
+      }));
+
+      await ctx.supabase
+        .from('product_categories')
+        .insert(productCategories);
+    }
+
     await triggerWebhooks(ctx.supabase, ctx.tenantId, 'product.created', data);
 
-    return new Response(JSON.stringify(formatResponse(data)), {
+    const { data: productWithCategories } = await ctx.supabase
+      .from('products')
+      .select('*, product_categories(category_id, categories(*))')
+      .eq('id', data.id)
+      .single();
+
+    return new Response(JSON.stringify(formatResponse(formatProductCategories(productWithCategories))), {
       status: 201,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
@@ -541,9 +649,11 @@ async function handleProducts(req, ctx, path) {
 
   if ((method === 'PUT' || method === 'PATCH') && id) {
     const body = await req.json();
+    const { category_ids, ...productData } = body;
+    
     const { data, error } = await ctx.supabase
       .from('products')
-      .update(body)
+      .update(productData)
       .eq('tenant_id', ctx.tenantId)
       .eq('id', id)
       .select()
@@ -556,9 +666,33 @@ async function handleProducts(req, ctx, path) {
       });
     }
 
+    if (category_ids && Array.isArray(category_ids)) {
+      await ctx.supabase
+        .from('product_categories')
+        .delete()
+        .eq('product_id', id);
+
+      if (category_ids.length > 0) {
+        const productCategories = category_ids.map(categoryId => ({
+          product_id: id,
+          category_id: categoryId
+        }));
+
+        await ctx.supabase
+          .from('product_categories')
+          .insert(productCategories);
+      }
+    }
+
     await triggerWebhooks(ctx.supabase, ctx.tenantId, 'product.updated', data);
 
-    return new Response(JSON.stringify(formatResponse(data)), {
+    const { data: productWithCategories } = await ctx.supabase
+      .from('products')
+      .select('*, product_categories(category_id, categories(*))')
+      .eq('id', id)
+      .single();
+
+    return new Response(JSON.stringify(formatResponse(formatProductCategories(productWithCategories))), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
@@ -591,8 +725,9 @@ async function handleProducts(req, ctx, path) {
   });
 }
 
-// Handler for Appointments
-async function handleAppointments(req, ctx, path) {
+// ============= CRUD Handlers for Appointments (COM OWNER_ID) =============
+
+async function handleAppointments(req: Request, ctx: AuthContext, path: string[]): Promise<Response> {
   const url = new URL(req.url);
   const method = req.method;
   const id = path[1];
@@ -619,18 +754,23 @@ async function handleAppointments(req, ctx, path) {
     } else {
       const pagination = parsePagination(url);
       const filters = parseFilters(url);
+      const ownerFilter = url.searchParams.get('owner_id');
 
       let query = ctx.supabase
         .from('appointments')
         .select('*', { count: 'exact' })
         .eq('tenant_id', ctx.tenantId)
-        .order('created_at', { ascending: false })
+        .order('start_time', { ascending: true })
         .limit(pagination.limit);
+
+      if (ownerFilter) {
+        query = query.eq('owner_id', ownerFilter);
+      }
 
       query = applyFilters(query, filters);
 
       if (pagination.cursor) {
-        query = query.lt('created_at', pagination.cursor);
+        query = query.gt('start_time', pagination.cursor);
       }
 
       const { data, error, count } = await query;
@@ -642,7 +782,7 @@ async function handleAppointments(req, ctx, path) {
         });
       }
 
-      const nextCursor = data.length === pagination.limit ? data[data.length - 1].created_at : null;
+      const nextCursor = data.length === pagination.limit ? data[data.length - 1].start_time : null;
 
       return new Response(JSON.stringify(formatResponse(data, {
         total: count,
@@ -729,8 +869,9 @@ async function handleAppointments(req, ctx, path) {
   });
 }
 
-// Handler for Tasks
-async function handleTasks(req, ctx, path) {
+// ============= CRUD Handlers for Tasks (COM OWNER_ID) =============
+
+async function handleTasks(req: Request, ctx: AuthContext, path: string[]): Promise<Response> {
   const url = new URL(req.url);
   const method = req.method;
   const id = path[1];
@@ -757,18 +898,23 @@ async function handleTasks(req, ctx, path) {
     } else {
       const pagination = parsePagination(url);
       const filters = parseFilters(url);
+      const ownerFilter = url.searchParams.get('owner_id');
 
       let query = ctx.supabase
         .from('tasks')
         .select('*', { count: 'exact' })
         .eq('tenant_id', ctx.tenantId)
-        .order('created_at', { ascending: false })
+        .order('due_date', { ascending: true, nullsFirst: false })
         .limit(pagination.limit);
+
+      if (ownerFilter) {
+        query = query.eq('owner_id', ownerFilter);
+      }
 
       query = applyFilters(query, filters);
 
       if (pagination.cursor) {
-        query = query.lt('created_at', pagination.cursor);
+        query = query.gt('due_date', pagination.cursor);
       }
 
       const { data, error, count } = await query;
@@ -780,7 +926,7 @@ async function handleTasks(req, ctx, path) {
         });
       }
 
-      const nextCursor = data.length === pagination.limit ? data[data.length - 1].created_at : null;
+      const nextCursor = data.length === pagination.limit ? data[data.length - 1].due_date : null;
 
       return new Response(JSON.stringify(formatResponse(data, {
         total: count,
@@ -867,17 +1013,22 @@ async function handleTasks(req, ctx, path) {
   });
 }
 
-// Handler for Pipelines
-async function handlePipelines(req, ctx, path) {
+// ============= CRUD Handlers for Pipelines =============
+
+async function handlePipelines(req: Request, ctx: AuthContext, path: string[]): Promise<Response> {
   const url = new URL(req.url);
   const method = req.method;
   const id = path[1];
+
+  if (id && path[2] === 'stages') {
+    return handlePipelineStages(req, ctx, id);
+  }
 
   if (method === 'GET') {
     if (id) {
       const { data, error } = await ctx.supabase
         .from('pipelines')
-        .select('*')
+        .select('*, stages(*)')
         .eq('tenant_id', ctx.tenantId)
         .eq('id', id)
         .single();
@@ -898,7 +1049,7 @@ async function handlePipelines(req, ctx, path) {
 
       let query = ctx.supabase
         .from('pipelines')
-        .select('*', { count: 'exact' })
+        .select('*, stages(*)', { count: 'exact' })
         .eq('tenant_id', ctx.tenantId)
         .order('created_at', { ascending: false })
         .limit(pagination.limit);
@@ -1005,8 +1156,51 @@ async function handlePipelines(req, ctx, path) {
   });
 }
 
-// Handler for Stages
-async function handleStages(req, ctx, path) {
+async function handlePipelineStages(req: Request, ctx: AuthContext, pipelineId: string): Promise<Response> {
+  const method = req.method;
+
+  const { data: pipeline } = await ctx.supabase
+    .from('pipelines')
+    .select('id')
+    .eq('id', pipelineId)
+    .eq('tenant_id', ctx.tenantId)
+    .single();
+
+  if (!pipeline) {
+    return new Response(JSON.stringify({ error: 'Pipeline not found' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (method === 'GET') {
+    const { data, error } = await ctx.supabase
+      .from('stages')
+      .select('*')
+      .eq('pipeline_id', pipelineId)
+      .order('order', { ascending: true });
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    return new Response(JSON.stringify(formatResponse(data)), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+    status: 405,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
+// ============= CRUD Handlers for Stages =============
+
+async function handleStages(req: Request, ctx: AuthContext, path: string[]): Promise<Response> {
   const url = new URL(req.url);
   const method = req.method;
   const id = path[1];
@@ -1033,8 +1227,8 @@ async function handleStages(req, ctx, path) {
         .single();
 
       if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
-        return new Response(JSON.stringify({ error: 'Not found' }), {
-          status: 404,
+        return new Response(JSON.stringify({ error: 'Not authorized' }), {
+          status: 403,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
@@ -1045,35 +1239,36 @@ async function handleStages(req, ctx, path) {
     } else {
       const pagination = parsePagination(url);
       const filters = parseFilters(url);
-
       const pipelineId = url.searchParams.get('pipeline_id');
-      if (pipelineId) {
-        const { data: pipeline } = await ctx.supabase
-          .from('pipelines')
-          .select('id')
-          .eq('id', pipelineId)
-          .eq('tenant_id', ctx.tenantId)
-          .single();
 
-        if (!pipeline) {
-          return new Response(JSON.stringify({ error: 'Pipeline not found' }), {
-            status: 404,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          });
-        }
+      if (!pipelineId) {
+        return new Response(JSON.stringify({ error: 'pipeline_id query parameter is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const { data: pipeline } = await ctx.supabase
+        .from('pipelines')
+        .select('tenant_id')
+        .eq('id', pipelineId)
+        .single();
+
+      if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
+        return new Response(JSON.stringify({ error: 'Not authorized' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
       }
 
       let query = ctx.supabase
         .from('stages')
         .select('*', { count: 'exact' })
-        .order('order_index', { ascending: true })
+        .eq('pipeline_id', pipelineId)
+        .order('order', { ascending: true })
         .limit(pagination.limit);
 
       query = applyFilters(query, filters);
-
-      if (pagination.cursor) {
-        query = query.lt('created_at', pagination.cursor);
-      }
 
       const { data, error, count } = await query;
 
@@ -1084,12 +1279,10 @@ async function handleStages(req, ctx, path) {
         });
       }
 
-      const nextCursor = data.length === pagination.limit ? data[data.length - 1].created_at : null;
-
       return new Response(JSON.stringify(formatResponse(data, {
         total: count,
         limit: pagination.limit,
-        next_cursor: nextCursor
+        next_cursor: null
       })), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -1098,17 +1291,24 @@ async function handleStages(req, ctx, path) {
 
   if (method === 'POST') {
     const body = await req.json();
+    const { pipeline_id } = body;
+
+    if (!pipeline_id) {
+      return new Response(JSON.stringify({ error: 'pipeline_id is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     const { data: pipeline } = await ctx.supabase
       .from('pipelines')
-      .select('id')
-      .eq('id', body.pipeline_id)
-      .eq('tenant_id', ctx.tenantId)
+      .select('tenant_id')
+      .eq('id', pipeline_id)
       .single();
 
-    if (!pipeline) {
-      return new Response(JSON.stringify({ error: 'Pipeline not found' }), {
-        status: 404,
+    if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
+      return new Response(JSON.stringify({ error: 'Not authorized' }), {
+        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -1136,14 +1336,14 @@ async function handleStages(req, ctx, path) {
 
   if ((method === 'PUT' || method === 'PATCH') && id) {
     const body = await req.json();
-
-    const { data: existingStage } = await ctx.supabase
+    
+    const { data: stage } = await ctx.supabase
       .from('stages')
       .select('pipeline_id')
       .eq('id', id)
       .single();
 
-    if (!existingStage) {
+    if (!stage) {
       return new Response(JSON.stringify({ error: 'Stage not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -1153,7 +1353,7 @@ async function handleStages(req, ctx, path) {
     const { data: pipeline } = await ctx.supabase
       .from('pipelines')
       .select('tenant_id')
-      .eq('id', existingStage.pipeline_id)
+      .eq('id', stage.pipeline_id)
       .single();
 
     if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
@@ -1185,13 +1385,13 @@ async function handleStages(req, ctx, path) {
   }
 
   if (method === 'DELETE' && id) {
-    const { data: existingStage } = await ctx.supabase
+    const { data: stage } = await ctx.supabase
       .from('stages')
       .select('pipeline_id')
       .eq('id', id)
       .single();
 
-    if (!existingStage) {
+    if (!stage) {
       return new Response(JSON.stringify({ error: 'Stage not found' }), {
         status: 404,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -1201,7 +1401,7 @@ async function handleStages(req, ctx, path) {
     const { data: pipeline } = await ctx.supabase
       .from('pipelines')
       .select('tenant_id')
-      .eq('id', existingStage.pipeline_id)
+      .eq('id', stage.pipeline_id)
       .single();
 
     if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
@@ -1237,13 +1437,13 @@ async function handleStages(req, ctx, path) {
   });
 }
 
-// Handler for Cards
-async function handleCards(req, ctx, path) {
+// ============= CRUD Handlers for Cards (COM OWNER_ID) =============
+
+async function handleCards(req: Request, ctx: AuthContext, path: string[]): Promise<Response> {
   const url = new URL(req.url);
   const method = req.method;
   const id = path[1];
 
-  // Check for nested routes
   if (id && path[2] === 'tags') {
     return handleCardTags(req, ctx, id);
   }
@@ -1253,7 +1453,6 @@ async function handleCards(req, ctx, path) {
       const { data, error } = await ctx.supabase
         .from('cards')
         .select('*, card_tags(tag_id, tags(*))')
-        .eq('tenant_id', ctx.tenantId)
         .eq('id', id)
         .single();
 
@@ -1264,18 +1463,111 @@ async function handleCards(req, ctx, path) {
         });
       }
 
+      const { data: stage } = await ctx.supabase
+        .from('stages')
+        .select('pipeline_id')
+        .eq('id', data.stage_id)
+        .single();
+
+      if (!stage) {
+        return new Response(JSON.stringify({ error: 'Stage not found' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const { data: pipeline } = await ctx.supabase
+        .from('pipelines')
+        .select('tenant_id')
+        .eq('id', stage.pipeline_id)
+        .single();
+
+      if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
+        return new Response(JSON.stringify({ error: 'Not authorized' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       return new Response(JSON.stringify(formatResponse(formatTags(data, 'card_tags'))), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     } else {
       const pagination = parsePagination(url);
       const filters = parseFilters(url);
+      const stageId = url.searchParams.get('stage_id');
+      const pipelineId = url.searchParams.get('pipeline_id');
       const tagFilter = url.searchParams.get('tag');
+      const ownerFilter = url.searchParams.get('owner_id');
+
+      if (!stageId && !pipelineId) {
+        return new Response(JSON.stringify({ error: 'Either stage_id or pipeline_id query parameter is required' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      let stageIds = [];
+
+      if (stageId) {
+        stageIds = [stageId];
+        
+        const { data: stage } = await ctx.supabase
+          .from('stages')
+          .select('pipeline_id')
+          .eq('id', stageId)
+          .single();
+
+        if (!stage) {
+          return new Response(JSON.stringify({ error: 'Stage not found' }), {
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const { data: pipeline } = await ctx.supabase
+          .from('pipelines')
+          .select('tenant_id')
+          .eq('id', stage.pipeline_id)
+          .single();
+
+        if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
+          return new Response(JSON.stringify({ error: 'Not authorized' }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      } else if (pipelineId) {
+        const { data: pipeline } = await ctx.supabase
+          .from('pipelines')
+          .select('tenant_id')
+          .eq('id', pipelineId)
+          .single();
+
+        if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
+          return new Response(JSON.stringify({ error: 'Not authorized' }), {
+            status: 403,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const { data: stages } = await ctx.supabase
+          .from('stages')
+          .select('id')
+          .eq('pipeline_id', pipelineId);
+
+        stageIds = stages?.map(s => s.id) || [];
+
+        if (stageIds.length === 0) {
+          return new Response(JSON.stringify(formatResponse([], { total: 0, limit: pagination.limit, next_cursor: null })), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
 
       let query;
       
       if (tagFilter) {
-        // Filter by tag name
         const { data: tagData } = await ctx.supabase
           .from('tags')
           .select('id')
@@ -1289,7 +1581,6 @@ async function handleCards(req, ctx, path) {
           });
         }
 
-        // Get cards with this tag
         const { data: cardTagsData } = await ctx.supabase
           .from('card_tags')
           .select('card_id')
@@ -1306,24 +1597,24 @@ async function handleCards(req, ctx, path) {
         query = ctx.supabase
           .from('cards')
           .select('*, card_tags(tag_id, tags(*))', { count: 'exact' })
-          .eq('tenant_id', ctx.tenantId)
+          .in('stage_id', stageIds)
           .in('id', cardIds)
-          .order('position', { ascending: true })
+          .order('order', { ascending: true })
           .limit(pagination.limit);
       } else {
         query = ctx.supabase
           .from('cards')
           .select('*, card_tags(tag_id, tags(*))', { count: 'exact' })
-          .eq('tenant_id', ctx.tenantId)
-          .order('position', { ascending: true })
+          .in('stage_id', stageIds)
+          .order('order', { ascending: true })
           .limit(pagination.limit);
       }
 
-      query = applyFilters(query, filters);
-
-      if (pagination.cursor) {
-        query = query.lt('created_at', pagination.cursor);
+      if (ownerFilter) {
+        query = query.eq('owner_id', ownerFilter);
       }
+
+      query = applyFilters(query, filters);
 
       const { data, error, count } = await query;
 
@@ -1334,13 +1625,13 @@ async function handleCards(req, ctx, path) {
         });
       }
 
-      const formattedData = data.map(item => formatTags(item, 'card_tags'));
-      const nextCursor = data.length === pagination.limit ? data[data.length - 1].created_at : null;
+      // deno-lint-ignore no-explicit-any
+      const formattedData = data.map((item: any) => formatTags(item, 'card_tags'));
 
       return new Response(JSON.stringify(formatResponse(formattedData, {
         total: count,
         limit: pagination.limit,
-        next_cursor: nextCursor
+        next_cursor: null
       })), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -1349,17 +1640,37 @@ async function handleCards(req, ctx, path) {
 
   if (method === 'POST') {
     const body = await req.json();
+    const { stage_id } = body;
+
+    if (!stage_id) {
+      return new Response(JSON.stringify({ error: 'stage_id is required' }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { data: stage } = await ctx.supabase
+      .from('stages')
+      .select('pipeline_id')
+      .eq('id', stage_id)
+      .single();
+
+    if (!stage) {
+      return new Response(JSON.stringify({ error: 'Stage not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
 
     const { data: pipeline } = await ctx.supabase
       .from('pipelines')
-      .select('id')
-      .eq('id', body.pipeline_id)
-      .eq('tenant_id', ctx.tenantId)
+      .select('tenant_id')
+      .eq('id', stage.pipeline_id)
       .single();
 
-    if (!pipeline) {
-      return new Response(JSON.stringify({ error: 'Pipeline not found' }), {
-        status: 404,
+    if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
+      return new Response(JSON.stringify({ error: 'Not authorized' }), {
+        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
@@ -1387,10 +1698,49 @@ async function handleCards(req, ctx, path) {
 
   if ((method === 'PUT' || method === 'PATCH') && id) {
     const body = await req.json();
+    
+    const { data: card } = await ctx.supabase
+      .from('cards')
+      .select('stage_id')
+      .eq('id', id)
+      .single();
+
+    if (!card) {
+      return new Response(JSON.stringify({ error: 'Card not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { data: stage } = await ctx.supabase
+      .from('stages')
+      .select('pipeline_id')
+      .eq('id', card.stage_id)
+      .single();
+
+    if (!stage) {
+      return new Response(JSON.stringify({ error: 'Stage not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { data: pipeline } = await ctx.supabase
+      .from('pipelines')
+      .select('tenant_id')
+      .eq('id', stage.pipeline_id)
+      .single();
+
+    if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
+      return new Response(JSON.stringify({ error: 'Not authorized' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     const { data, error } = await ctx.supabase
       .from('cards')
       .update(body)
-      .eq('tenant_id', ctx.tenantId)
       .eq('id', id)
       .select()
       .single();
@@ -1410,10 +1760,48 @@ async function handleCards(req, ctx, path) {
   }
 
   if (method === 'DELETE' && id) {
+    const { data: card } = await ctx.supabase
+      .from('cards')
+      .select('stage_id')
+      .eq('id', id)
+      .single();
+
+    if (!card) {
+      return new Response(JSON.stringify({ error: 'Card not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { data: stage } = await ctx.supabase
+      .from('stages')
+      .select('pipeline_id')
+      .eq('id', card.stage_id)
+      .single();
+
+    if (!stage) {
+      return new Response(JSON.stringify({ error: 'Stage not found' }), {
+        status: 404,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const { data: pipeline } = await ctx.supabase
+      .from('pipelines')
+      .select('tenant_id')
+      .eq('id', stage.pipeline_id)
+      .single();
+
+    if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
+      return new Response(JSON.stringify({ error: 'Not authorized' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     const { error } = await ctx.supabase
       .from('cards')
       .delete()
-      .eq('tenant_id', ctx.tenantId)
       .eq('id', id);
 
     if (error) {
@@ -1437,21 +1825,44 @@ async function handleCards(req, ctx, path) {
   });
 }
 
-// Handler for Card Tags
-async function handleCardTags(req, ctx, cardId) {
+async function handleCardTags(req: Request, ctx: AuthContext, cardId: string): Promise<Response> {
   const method = req.method;
 
-  // Verify card ownership
   const { data: card } = await ctx.supabase
     .from('cards')
-    .select('id')
+    .select('stage_id')
     .eq('id', cardId)
-    .eq('tenant_id', ctx.tenantId)
     .single();
 
   if (!card) {
     return new Response(JSON.stringify({ error: 'Card not found' }), {
       status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  const { data: stage } = await ctx.supabase
+    .from('stages')
+    .select('pipeline_id')
+    .eq('id', card.stage_id)
+    .single();
+
+  if (!stage) {
+    return new Response(JSON.stringify({ error: 'Stage not found' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  const { data: pipeline } = await ctx.supabase
+    .from('pipelines')
+    .select('tenant_id')
+    .eq('id', stage.pipeline_id)
+    .single();
+
+  if (!pipeline || pipeline.tenant_id !== ctx.tenantId) {
+    return new Response(JSON.stringify({ error: 'Not authorized' }), {
+      status: 403,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
@@ -1542,8 +1953,9 @@ async function handleCardTags(req, ctx, cardId) {
   });
 }
 
-// Handler for Tags
-async function handleTags(req, ctx, path) {
+// ============= CRUD Handlers for Tags =============
+
+async function handleTags(req: Request, ctx: AuthContext, path: string[]): Promise<Response> {
   const url = new URL(req.url);
   const method = req.method;
   const id = path[1];
@@ -1580,10 +1992,6 @@ async function handleTags(req, ctx, path) {
 
       query = applyFilters(query, filters);
 
-      if (pagination.cursor) {
-        query = query.lt('created_at', pagination.cursor);
-      }
-
       const { data, error, count } = await query;
 
       if (error) {
@@ -1593,12 +2001,10 @@ async function handleTags(req, ctx, path) {
         });
       }
 
-      const nextCursor = data.length === pagination.limit ? data[data.length - 1].created_at : null;
-
       return new Response(JSON.stringify(formatResponse(data, {
         total: count,
         limit: pagination.limit,
-        next_cursor: nextCursor
+        next_cursor: null
       })), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -1680,19 +2086,153 @@ async function handleTags(req, ctx, path) {
   });
 }
 
+// ============= NOVO: CRUD Handlers for Categories =============
+
+async function handleCategories(req: Request, ctx: AuthContext, path: string[]): Promise<Response> {
+  const url = new URL(req.url);
+  const method = req.method;
+  const id = path[1];
+
+  if (method === 'GET') {
+    if (id) {
+      const { data, error } = await ctx.supabase
+        .from('categories')
+        .select('*')
+        .eq('tenant_id', ctx.tenantId)
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      return new Response(JSON.stringify(formatResponse(data)), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    } else {
+      const pagination = parsePagination(url);
+      const filters = parseFilters(url);
+
+      let query = ctx.supabase
+        .from('categories')
+        .select('*', { count: 'exact' })
+        .eq('tenant_id', ctx.tenantId)
+        .order('name', { ascending: true })
+        .limit(pagination.limit);
+
+      query = applyFilters(query, filters);
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        return new Response(JSON.stringify({ error: error.message }), {
+          status: 500,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      return new Response(JSON.stringify(formatResponse(data, {
+        total: count,
+        limit: pagination.limit,
+        next_cursor: null
+      })), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+  }
+
+  if (method === 'POST') {
+    const body = await req.json();
+    const { data, error } = await ctx.supabase
+      .from('categories')
+      .insert({ ...body, tenant_id: ctx.tenantId })
+      .select()
+      .single();
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    await triggerWebhooks(ctx.supabase, ctx.tenantId, 'category.created', data);
+
+    return new Response(JSON.stringify(formatResponse(data)), {
+      status: 201,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  if ((method === 'PUT' || method === 'PATCH') && id) {
+    const body = await req.json();
+    const { data, error } = await ctx.supabase
+      .from('categories')
+      .update(body)
+      .eq('tenant_id', ctx.tenantId)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    await triggerWebhooks(ctx.supabase, ctx.tenantId, 'category.updated', data);
+
+    return new Response(JSON.stringify(formatResponse(data)), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
+  }
+
+  if (method === 'DELETE' && id) {
+    const { error } = await ctx.supabase
+      .from('categories')
+      .delete()
+      .eq('tenant_id', ctx.tenantId)
+      .eq('id', id);
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), {
+        status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    await triggerWebhooks(ctx.supabase, ctx.tenantId, 'category.deleted', { id });
+
+    return new Response(null, {
+      status: 204,
+      headers: corsHeaders
+    });
+  }
+
+  return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+    status: 405,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+}
+
+// ============= Main Handler =============
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const startTime = Date.now();
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL') ?? '',
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  );
-
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     const ctx = await authenticate(req, supabase);
+
     if (!ctx) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -1701,19 +2241,10 @@ serve(async (req) => {
     }
 
     const url = new URL(req.url);
-    const segments = url.pathname.split('/').filter(Boolean);
-    const apiIndex = segments.indexOf('api-v1');
-    const path = apiIndex >= 0 ? segments.slice(apiIndex + 1) : segments;
-
-    if (!path[0]) {
-      return new Response(JSON.stringify({ error: 'Resource not specified' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
-    }
-
+    const path = url.pathname.replace(/^\/v1\//, '').split('/').filter(Boolean);
     const resource = path[0];
-    let response;
+
+    let response: Response;
 
     switch (resource) {
       case 'contacts':
@@ -1740,6 +2271,9 @@ serve(async (req) => {
       case 'tags':
         response = await handleTags(req, ctx, path);
         break;
+      case 'categories':
+        response = await handleCategories(req, ctx, path);
+        break;
       default:
         response = new Response(JSON.stringify({ error: 'Resource not found' }), {
           status: 404,
@@ -1747,23 +2281,14 @@ serve(async (req) => {
         });
     }
 
-    const responseTime = Date.now() - startTime;
-    await supabase.from('api_logs').insert({
-      tenant_id: ctx.tenantId,
-      api_key_id: ctx.apiKeyId,
-      method: req.method,
-      path: url.pathname,
-      status_code: response.status,
-      response_time_ms: responseTime,
-      ip_address: req.headers.get('x-forwarded-for') || 'unknown',
-      user_agent: req.headers.get('user-agent') || 'unknown'
-    });
-
     return response;
+
   } catch (error) {
     console.error('API Error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: 'Internal server error', message: errorMessage }), {
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
