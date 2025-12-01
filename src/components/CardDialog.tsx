@@ -64,7 +64,7 @@ export const CardDialog = ({
         setSelectedTagIds([]);
       }
     }
-  }, [existingCard, open, cardTags]);
+  }, [existingCard?.id, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -161,7 +161,7 @@ export const CardDialog = ({
               
               <CustomFieldsSection
                 entityType="card"
-                entityId={cardId}
+                entityId={existingCard?.id}
               />
             </div>
           </form>
