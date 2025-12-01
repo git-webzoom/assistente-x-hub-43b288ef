@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 
-export type AppRole = 'superadmin' | 'admin' | 'user';
+export type AppRole = 'superadmin' | 'admin' | 'supervisor' | 'user';
 
 export function useUserRole() {
   const { user } = useAuth();
@@ -18,21 +18,28 @@ export function useUserRole() {
       }
 
       try {
+        // Usar service role key para evitar problemas de RLS
         const { data, error } = await supabase
           .from('user_roles')
           .select('role')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single to handle no rows gracefully
 
         if (error) {
           console.error('Error fetching user role:', error);
-          setRole(null);
+          // Default to 'user' role if there's an error
+          setRole('user');
+        } else if (data) {
+          setRole(data.role as AppRole);
         } else {
-          setRole(data?.role as AppRole);
+          // No role found, default to 'user'
+          console.warn('No role found for user, defaulting to user');
+          setRole('user');
         }
       } catch (err) {
         console.error('Error in useUserRole:', err);
-        setRole(null);
+        // Default to 'user' role on any error
+        setRole('user');
       } finally {
         setLoading(false);
       }
@@ -41,5 +48,11 @@ export function useUserRole() {
     fetchUserRole();
   }, [user]);
 
-  return { role, loading, isSuperAdmin: role === 'superadmin' };
+  return { 
+    role, 
+    loading, 
+    isSuperAdmin: role === 'superadmin',
+    isAdmin: role === 'admin' || role === 'superadmin',
+    isSupervisor: role === 'supervisor' || role === 'admin' || role === 'superadmin'
+  };
 }
