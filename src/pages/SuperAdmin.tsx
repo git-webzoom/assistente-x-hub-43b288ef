@@ -12,10 +12,11 @@ import { useSystemSettings } from '@/hooks/useSystemSettings';
 import { useTenants } from '@/hooks/useTenants';
 import { useAuditLog } from '@/hooks/useAuditLog';
 import { useApiConfig } from '@/hooks/useApiConfig';
+import { useCreateTenant } from '@/hooks/useCreateTenant';
 import { SearchInput } from '@/components/SearchInput';
 import { TenantMenuSettings } from '@/components/TenantMenuSettings';
 import { JsonEditor } from '@/components/JsonEditor';
-import { Shield, Settings, Users, History, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
+import { Shield, Settings, Users, History, CheckCircle2, XCircle, Loader2, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
@@ -43,6 +44,10 @@ export default function SuperAdmin() {
             <Users className="h-4 w-4 mr-2" />
             Tenants
           </TabsTrigger>
+          <TabsTrigger value="create-tenant">
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Tenant
+          </TabsTrigger>
           <TabsTrigger value="audit">
             <History className="h-4 w-4 mr-2" />
             Auditoria
@@ -55,6 +60,10 @@ export default function SuperAdmin() {
 
         <TabsContent value="tenants">
           <TenantsSection />
+        </TabsContent>
+
+        <TabsContent value="create-tenant">
+          <CreateTenantSection />
         </TabsContent>
 
         <TabsContent value="audit">
@@ -416,6 +425,121 @@ function TenantDetail({ tenant, onBack }: { tenant: any; onBack: () => void }) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function CreateTenantSection() {
+  const { createTenant, isCreating } = useCreateTenant();
+  const [formData, setFormData] = useState({
+    tenantName: '',
+    adminEmail: '',
+    adminName: '',
+    adminPassword: '',
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.tenantName.trim() || !formData.adminEmail.trim() || !formData.adminPassword.trim()) {
+      toast({
+        title: 'Erro',
+        description: 'Preencha todos os campos obrigatórios',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (formData.adminPassword.length < 6) {
+      toast({
+        title: 'Erro',
+        description: 'A senha deve ter pelo menos 6 caracteres',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    createTenant(formData);
+    
+    // Reset form on success
+    setFormData({
+      tenantName: '',
+      adminEmail: '',
+      adminName: '',
+      adminPassword: '',
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Criar Novo Tenant com Admin</CardTitle>
+        <CardDescription>
+          Crie um novo tenant e seu usuário administrador em uma única operação
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="tenantName">Nome do Tenant *</Label>
+            <Input
+              id="tenantName"
+              value={formData.tenantName}
+              onChange={(e) => setFormData({ ...formData, tenantName: e.target.value })}
+              placeholder="Empresa X"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="adminEmail">Email do Admin *</Label>
+            <Input
+              id="adminEmail"
+              type="email"
+              value={formData.adminEmail}
+              onChange={(e) => setFormData({ ...formData, adminEmail: e.target.value })}
+              placeholder="admin@empresa.com"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="adminName">Nome do Admin</Label>
+            <Input
+              id="adminName"
+              value={formData.adminName}
+              onChange={(e) => setFormData({ ...formData, adminName: e.target.value })}
+              placeholder="João Silva"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="adminPassword">Senha do Admin *</Label>
+            <Input
+              id="adminPassword"
+              type="password"
+              value={formData.adminPassword}
+              onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
+              placeholder="Mínimo 6 caracteres"
+              required
+            />
+          </div>
+
+          <Button type="submit" className="w-full" disabled={isCreating}>
+            {isCreating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Criando...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Criar Tenant com Admin
+              </>
+            )}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
 

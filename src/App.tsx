@@ -8,7 +8,6 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute, PublicRoute } from "@/components/ProtectedRoute";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import Signup from "./pages/Signup";
 import Dashboard from "./pages/Dashboard";
 import DashboardHome from "./pages/DashboardHome";
 import Pipelines from "./pages/Pipelines";
@@ -38,7 +37,6 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-              <Route path="/signup" element={<PublicRoute><Signup /></PublicRoute>} />
               <Route path="/p/:slug" element={<ProductPage />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>}>
                 <Route index element={<DashboardHome />} />
