@@ -14,7 +14,6 @@ export interface Product {
   cost: number | null;
   sku: string | null;
   stock: number | null;
-  category: string | null;
   slug: string;
   is_active: boolean;
   created_at: string;
