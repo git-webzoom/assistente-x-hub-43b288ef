@@ -15,11 +15,10 @@ COPY . .
 # Build arguments
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
-ARG NODE_ENV=production
 
 ENV VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
 ENV VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
-ENV NODE_ENV=${NODE_ENV}
+ENV NODE_ENV=production
 
 # Build
 RUN npm run build
@@ -35,11 +34,8 @@ RUN npm install -g serve@14.2.1
 # Copy built files
 COPY --from=builder /app/dist ./dist
 
-# Default port
-ENV PORT=3000
+# IMPORTANTE: Porta fixa 80 para o Easypanel
+EXPOSE 80
 
-# Expose port
-EXPOSE 3000
-
-# Start - sem healthcheck
-CMD ["sh", "-c", "serve -s dist -l ${PORT} -n --no-port-switching"]
+# Start na porta 80 (sem variável dinâmica)
+CMD ["serve", "-s", "dist", "-l", "80", "-n"]
