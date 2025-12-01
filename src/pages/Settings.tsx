@@ -8,7 +8,8 @@ import CategorySettings from './settings/CategorySettings';
 import { useUserRole } from '@/hooks/useUserRole';
 
 export default function Settings() {
-  const { isAdmin } = useUserRole();
+  const { role } = useUserRole();
+  const isAdmin = role === 'admin' || role === 'superadmin';
 
   return (
     <div className="space-y-6">
