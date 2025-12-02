@@ -30,8 +30,10 @@ import { useContacts, Contact } from '@/hooks/useContacts';
 import { Plus, Users, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { SearchInput } from '@/components/SearchInput';
 import { DataTableWrapper } from '@/components/DataTableWrapper';
+import { useUserEntityPermissions } from '@/hooks/useUserEntityPermissions';
 
 const Contacts = () => {
+  const { hasPermission } = useUserEntityPermissions();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
@@ -82,10 +84,12 @@ const Contacts = () => {
             Gerencie seus contatos e relacionamentos
           </p>
         </div>
-        <Button onClick={handleNewContact}>
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Contato
-        </Button>
+        {hasPermission('contacts', 'create') && (
+          <Button onClick={handleNewContact}>
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Contato
+          </Button>
+        )}
       </div>
 
       <SearchInput
@@ -132,7 +136,7 @@ const Contacts = () => {
               ? 'Tente ajustar sua busca ou limpar os filtros'
               : 'Comece adicionando seu primeiro contato para gerenciar seus relacionamentos'}
           </p>
-          {!searchQuery && (
+          {!searchQuery && hasPermission('contacts', 'create') && (
             <Button onClick={handleNewContact}>
               <Plus className="mr-2 h-4 w-4" />
               Adicionar Primeiro Contato
@@ -166,17 +170,21 @@ const Contacts = () => {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="bg-background">
-                        <DropdownMenuItem onClick={() => handleEdit(contact)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Editar
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleDelete(contact)}
-                          className="text-destructive focus:text-destructive"
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Excluir
-                        </DropdownMenuItem>
+                        {hasPermission('contacts', 'edit') && (
+                          <DropdownMenuItem onClick={() => handleEdit(contact)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Editar
+                          </DropdownMenuItem>
+                        )}
+                        {hasPermission('contacts', 'delete') && (
+                          <DropdownMenuItem 
+                            onClick={() => handleDelete(contact)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Excluir
+                          </DropdownMenuItem>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

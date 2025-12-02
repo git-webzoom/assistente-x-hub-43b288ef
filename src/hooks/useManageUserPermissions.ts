@@ -134,6 +134,7 @@ export const useManageUserPermissions = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-permissions'] });
+      queryClient.invalidateQueries({ queryKey: ['user-entity-permissions'] });
       toast({
         title: 'Sucesso',
         description: 'Permissões atualizadas com sucesso.',
@@ -159,6 +160,7 @@ export const useManageUserPermissions = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users-with-permissions'] });
+      queryClient.invalidateQueries({ queryKey: ['user-entity-permissions'] });
       toast({
         title: 'Sucesso',
         description: 'Permissões resetadas com sucesso.',

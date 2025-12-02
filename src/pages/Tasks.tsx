@@ -42,8 +42,10 @@ import { ContactSelect } from '@/components/ContactSelect';
 import { UserSelect } from '@/components/UserSelect';
 import { SearchWithFilter } from '@/components/SearchWithFilter';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useUserEntityPermissions } from '@/hooks/useUserEntityPermissions';
 
 export default function Tasks() {
+  const { hasPermission } = useUserEntityPermissions();
   const { tasks, isLoading, createTask, updateTask, deleteTask } = useTasks();
   const { contacts } = useContacts();
   const { isSupervisor } = useUserRole();
@@ -177,10 +179,12 @@ export default function Tasks() {
           <h1 className="text-3xl font-bold">Tarefas</h1>
           <p className="text-muted-foreground mt-1">Gerencie suas tarefas e atividades</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Tarefa
-        </Button>
+        {hasPermission('tasks', 'create') && (
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Tarefa
+          </Button>
+        )}
       </div>
 
       <SearchWithFilter
@@ -269,12 +273,16 @@ export default function Tasks() {
                   </div>
 
                   <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(task)}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(task.id)}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
+                    {hasPermission('tasks', 'edit') && (
+                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(task)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    )}
+                    {hasPermission('tasks', 'delete') && (
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(task.id)}>
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
