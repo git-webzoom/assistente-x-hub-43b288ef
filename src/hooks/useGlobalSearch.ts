@@ -28,8 +28,10 @@ export const useGlobalSearch = (query: string) => {
     queryFn: async () => {
       if (!currentUser?.tenant_id || !debouncedQuery) return [];
 
-      const searchTerm = `%${debouncedQuery}%`;
+      const searchTerm = `*${debouncedQuery}*`;
       const tenantId = currentUser.tenant_id;
+
+      console.log('[GlobalSearch] Buscando:', { tenantId, debouncedQuery, searchTerm });
 
       // Executar todas as queries em paralelo
       const [contactsRes, cardsRes, tasksRes, productsRes] = await Promise.all([
@@ -61,6 +63,17 @@ export const useGlobalSearch = (query: string) => {
           .or(`name.ilike.${searchTerm},description.ilike.${searchTerm},sku.ilike.${searchTerm}`)
           .limit(5),
       ]);
+
+      console.log('[GlobalSearch] Resultados:', {
+        contacts: contactsRes.data?.length || 0,
+        contactsError: contactsRes.error,
+        cards: cardsRes.data?.length || 0,
+        cardsError: cardsRes.error,
+        tasks: tasksRes.data?.length || 0,
+        tasksError: tasksRes.error,
+        products: productsRes.data?.length || 0,
+        productsError: productsRes.error,
+      });
 
       const contactsResult = contactsRes.data || [];
       const cardsResult = cardsRes.data || [];
