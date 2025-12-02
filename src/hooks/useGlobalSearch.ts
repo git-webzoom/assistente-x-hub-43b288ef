@@ -28,62 +28,110 @@ export const useGlobalSearch = (query: string) => {
     queryFn: async () => {
       if (!currentUser?.tenant_id || !debouncedQuery) return [];
 
-      const searchTerm = `%${debouncedQuery}%`;
       const tenantId = currentUser.tenant_id;
+      const searchPattern = `%${debouncedQuery}%`;
 
-      console.log('[GlobalSearch] Buscando:', { tenantId, debouncedQuery, searchTerm });
+      console.log('[GlobalSearch] Buscando:', { tenantId, debouncedQuery, searchPattern });
+
+      // Buscar contatos por nome
+      const contactsByName = supabase
+        .from('contacts')
+        .select('id, name, email, company')
+        .eq('tenant_id', tenantId)
+        .ilike('name', searchPattern)
+        .limit(5);
+
+      // Buscar contatos por email
+      const contactsByEmail = supabase
+        .from('contacts')
+        .select('id, name, email, company')
+        .eq('tenant_id', tenantId)
+        .ilike('email', searchPattern)
+        .limit(5);
+
+      // Buscar cards por título
+      const cardsByTitle = supabase
+        .from('cards')
+        .select('id, title, description')
+        .eq('tenant_id', tenantId)
+        .ilike('title', searchPattern)
+        .limit(5);
+
+      // Buscar tasks por título
+      const tasksByTitle = supabase
+        .from('tasks')
+        .select('id, title, description')
+        .eq('tenant_id', tenantId)
+        .ilike('title', searchPattern)
+        .limit(5);
+
+      // Buscar produtos por nome
+      const productsByName = supabase
+        .from('products')
+        .select('id, name, description, sku')
+        .eq('tenant_id', tenantId)
+        .ilike('name', searchPattern)
+        .limit(5);
+
+      // Buscar produtos por SKU
+      const productsBySku = supabase
+        .from('products')
+        .select('id, name, description, sku')
+        .eq('tenant_id', tenantId)
+        .ilike('sku', searchPattern)
+        .limit(5);
 
       // Executar todas as queries em paralelo
-      const [contactsRes, cardsRes, tasksRes, productsRes] = await Promise.all([
-        supabase
-          .from('contacts')
-          .select('id, name, email, company')
-          .eq('tenant_id', tenantId)
-          .or(`name.ilike.${searchTerm},email.ilike.${searchTerm},company.ilike.${searchTerm}`)
-          .limit(5),
-
-        supabase
-          .from('cards')
-          .select('id, title, description')
-          .eq('tenant_id', tenantId)
-          .or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`)
-          .limit(5),
-
-        supabase
-          .from('tasks')
-          .select('id, title, description')
-          .eq('tenant_id', tenantId)
-          .or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`)
-          .limit(5),
-
-        supabase
-          .from('products')
-          .select('id, name, description, sku')
-          .eq('tenant_id', tenantId)
-          .or(`name.ilike.${searchTerm},description.ilike.${searchTerm},sku.ilike.${searchTerm}`)
-          .limit(5),
+      const [
+        contactsNameRes,
+        contactsEmailRes,
+        cardsRes,
+        tasksRes,
+        productsNameRes,
+        productsSkuRes,
+      ] = await Promise.all([
+        contactsByName,
+        contactsByEmail,
+        cardsByTitle,
+        tasksByTitle,
+        productsByName,
+        productsBySku,
       ]);
 
       console.log('[GlobalSearch] Resultados:', {
-        contacts: contactsRes.data?.length || 0,
-        contactsError: contactsRes.error,
+        contactsByName: contactsNameRes.data?.length || 0,
+        contactsNameError: contactsNameRes.error,
+        contactsByEmail: contactsEmailRes.data?.length || 0,
+        contactsEmailError: contactsEmailRes.error,
         cards: cardsRes.data?.length || 0,
         cardsError: cardsRes.error,
         tasks: tasksRes.data?.length || 0,
         tasksError: tasksRes.error,
-        products: productsRes.data?.length || 0,
-        productsError: productsRes.error,
+        productsByName: productsNameRes.data?.length || 0,
+        productsNameError: productsNameRes.error,
+        productsBySku: productsSkuRes.data?.length || 0,
+        productsSkuError: productsSkuRes.error,
       });
 
-      const contactsResult = contactsRes.data || [];
-      const cardsResult = cardsRes.data || [];
-      const tasksResult = tasksRes.data || [];
-      const productsResult = productsRes.data || [];
+      // Combinar e remover duplicatas
+      const contactsMap = new Map();
+      [...(contactsNameRes.data || []), ...(contactsEmailRes.data || [])].forEach((c) => {
+        if (!contactsMap.has(c.id)) {
+          contactsMap.set(c.id, c);
+        }
+      });
+
+      const productsMap = new Map();
+      [...(productsNameRes.data || []), ...(productsSkuRes.data || [])].forEach((p) => {
+        if (!productsMap.has(p.id)) {
+          productsMap.set(p.id, p);
+        }
+      });
 
       const results: SearchResult[] = [];
 
       // Mapear contatos
-      contactsResult.forEach((c) => {
+      contactsMap.forEach((c) => {
         results.push({
           id: c.id,
           title: c.name || c.email,
@@ -94,7 +142,7 @@ export const useGlobalSearch = (query: string) => {
       });
 
       // Mapear cards
-      cardsResult.forEach((c) => {
+      (cardsRes.data || []).forEach((c) => {
         results.push({
           id: c.id,
           title: c.title,
@@ -105,7 +153,7 @@ export const useGlobalSearch = (query: string) => {
       });
 
       // Mapear tarefas
-      tasksResult.forEach((t) => {
+      (tasksRes.data || []).forEach((t) => {
         results.push({
           id: t.id,
           title: t.title,
@@ -116,7 +164,7 @@ export const useGlobalSearch = (query: string) => {
       });
 
       // Mapear produtos
-      productsResult.forEach((p) => {
+      productsMap.forEach((p) => {
         results.push({
           id: p.id,
           title: p.name,
