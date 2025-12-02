@@ -43,6 +43,8 @@ import { UserSelect } from '@/components/UserSelect';
 import { SearchWithFilter } from '@/components/SearchWithFilter';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useUserEntityPermissions } from '@/hooks/useUserEntityPermissions';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/DataPagination';
 
 export default function Tasks() {
   const { hasPermission } = useUserEntityPermissions();
@@ -154,6 +156,16 @@ export default function Tasks() {
     return matchesSearch && matchesStatus;
   });
 
+  const {
+    currentPage,
+    setCurrentPage,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+  } = usePagination(filteredTasks, 8);
+
   const getPriorityBadge = (priority: Task['priority']) => {
     const variants = {
       low: { variant: 'secondary' as const, label: 'Baixa' },
@@ -209,8 +221,8 @@ export default function Tasks() {
       <div className="grid gap-4">
         {isLoading ? (
           Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)
-        ) : filteredTasks && filteredTasks.length > 0 ? (
-          filteredTasks.map((task) => {
+        ) : paginatedItems && paginatedItems.length > 0 ? (
+          paginatedItems.map((task) => {
             const priorityBadge = getPriorityBadge(task.priority);
             const statusBadge = getStatusBadge(task.status);
             const isCompleted = task.status === 'completed';
@@ -301,6 +313,17 @@ export default function Tasks() {
           </Card>
         )}
       </div>
+
+      {filteredTasks && filteredTasks.length > 0 && (
+        <DataPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          onPageChange={setCurrentPage}
+        />
+      )}
 
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
         <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">

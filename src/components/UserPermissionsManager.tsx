@@ -10,6 +10,9 @@ import { CreateUserDialog } from '@/components/CreateUserDialog';
 import { EditUserDialog } from '@/components/EditUserDialog';
 import { ResetPasswordDialog } from '@/components/ResetPasswordDialog';
 import { useToggleUserStatus } from '@/hooks/useToggleUserStatus';
+import { SearchInput } from '@/components/SearchInput';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/DataPagination';
 import {
   Accordion,
   AccordionContent,
@@ -42,6 +45,7 @@ const ROLE_LABELS: Record<string, { label: string; variant: 'default' | 'seconda
 
 export function UserPermissionsManager() {
   const { usersWithPermissions, isLoading, updatePermission, resetPermissions, availableEntities, currentUserRole } = useManageUserPermissions();
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Check if current user can edit a specific user based on role hierarchy
   const canEditUser = (targetRole: string): boolean => {
@@ -54,6 +58,21 @@ export function UserPermissionsManager() {
   const [expandedUser, setExpandedUser] = useState<string>('');
   const [editingUser, setEditingUser] = useState<{ id: string; email: string; name: string | null; role: string } | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<{ id: string; email: string; name: string | null } | null>(null);
+
+  const filteredUsers = usersWithPermissions?.filter((user) =>
+    user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const {
+    currentPage,
+    setCurrentPage,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+  } = usePagination(filteredUsers, 8);
 
   if (isLoading) {
     return (
@@ -115,120 +134,139 @@ export function UserPermissionsManager() {
             <CreateUserDialog />
           </div>
         </CardHeader>
-        <CardContent>
-          {usersWithPermissions.length === 0 ? (
-            <p className="text-muted-foreground text-sm">Nenhum usuário encontrado.</p>
+        <CardContent className="space-y-4">
+          <SearchInput
+            value={searchQuery}
+            onChange={setSearchQuery}
+            placeholder="Buscar por nome ou email..."
+          />
+
+          {paginatedItems.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              {searchQuery ? 'Nenhum usuário encontrado.' : 'Nenhum usuário encontrado.'}
+            </p>
           ) : (
-            <Accordion type="single" collapsible value={expandedUser} onValueChange={setExpandedUser}>
-              {usersWithPermissions.map((user) => (
-                <AccordionItem key={user.id} value={user.id}>
-                  <AccordionTrigger className="hover:no-underline">
-                    <div className="flex items-center justify-between w-full pr-4">
-                      <div className="flex flex-col items-start gap-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">{user.name || user.email}</span>
-                          <Badge variant={ROLE_LABELS[user.role]?.variant || 'outline'}>
-                            {ROLE_LABELS[user.role]?.label || user.role}
-                          </Badge>
-                          {user.is_banned && (
-                            <Badge variant="destructive">Desativado</Badge>
-                          )}
-                        </div>
-                        <span className="text-sm text-muted-foreground">{user.email}</span>
-                      </div>
-                    </div>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                      <div className="space-y-4 pt-4">
-                      {canEditUser(user.role) && (
-                        <div className="flex justify-end gap-2 flex-wrap">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setEditingUser({ id: user.id, email: user.email, name: user.name, role: user.role })}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Editar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setResetPasswordUser({ id: user.id, email: user.email, name: user.name })}
-                          >
-                            <KeyRound className="h-4 w-4 mr-2" />
-                            Resetar Senha
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleToggleStatus(user.id, user.is_banned)}
-                            disabled={isToggling}
-                          >
-                            {user.is_banned ? (
-                              <>
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Ativar
-                              </>
-                            ) : (
-                              <>
-                                <Ban className="h-4 w-4 mr-2" />
-                                Desativar
-                              </>
+            <>
+              <Accordion type="single" collapsible value={expandedUser} onValueChange={setExpandedUser}>
+                {paginatedItems.map((user) => (
+                  <AccordionItem key={user.id} value={user.id}>
+                    <AccordionTrigger className="hover:no-underline">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="flex flex-col items-start gap-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{user.name || user.email}</span>
+                            <Badge variant={ROLE_LABELS[user.role]?.variant || 'outline'}>
+                              {ROLE_LABELS[user.role]?.label || user.role}
+                            </Badge>
+                            {user.is_banned && (
+                              <Badge variant="destructive">Desativado</Badge>
                             )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleResetUser(user.id)}
-                            disabled={resetPermissions.isPending}
-                          >
-                            <RefreshCw className="h-4 w-4 mr-2" />
-                            Resetar Permissões
-                          </Button>
+                          </div>
+                          <span className="text-sm text-muted-foreground">{user.email}</span>
                         </div>
-                      )}
-                      
-                      <div className="border rounded-lg overflow-hidden">
-                        <table className="w-full">
-                          <thead className="bg-muted">
-                            <tr>
-                              <th className="text-left p-3 font-medium">Funcionalidade</th>
-                              {Object.entries(ACTION_LABELS).map(([key, label]) => (
-                                <th key={key} className="text-center p-3 font-medium">{label}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {availableEntities.map((entityKey) => {
-                              const permission = user.permissions.find(p => p.entity_key === entityKey);
-                              
-                              return (
-                                <tr key={entityKey} className="border-t">
-                                  <td className="p-3 font-medium">{ENTITY_LABELS[entityKey] || entityKey}</td>
-                                  {(['can_view', 'can_create', 'can_edit', 'can_delete'] as const).map((action) => (
-                                    <td key={action} className="p-3 text-center">
-                                      <div className="flex justify-center">
-                                        <Checkbox
-                                          checked={permission?.[action] ?? true}
-                                          onCheckedChange={(checked) => 
-                                            handlePermissionChange(user.id, entityKey, action, checked as boolean)
-                                          }
-                                          disabled={updatePermission.isPending || !canEditUser(user.role)}
-                                        />
-                                      </div>
-                                    </td>
-                                  ))}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
                       </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+                    </AccordionTrigger>
+                    <AccordionContent>
+                        <div className="space-y-4 pt-4">
+                        {canEditUser(user.role) && (
+                          <div className="flex justify-end gap-2 flex-wrap">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setEditingUser({ id: user.id, email: user.email, name: user.name, role: user.role })}
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setResetPasswordUser({ id: user.id, email: user.email, name: user.name })}
+                            >
+                              <KeyRound className="h-4 w-4 mr-2" />
+                              Resetar Senha
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleToggleStatus(user.id, user.is_banned)}
+                              disabled={isToggling}
+                            >
+                              {user.is_banned ? (
+                                <>
+                                  <CheckCircle className="h-4 w-4 mr-2" />
+                                  Ativar
+                                </>
+                              ) : (
+                                <>
+                                  <Ban className="h-4 w-4 mr-2" />
+                                  Desativar
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleResetUser(user.id)}
+                              disabled={resetPermissions.isPending}
+                            >
+                              <RefreshCw className="h-4 w-4 mr-2" />
+                              Resetar Permissões
+                            </Button>
+                          </div>
+                        )}
+                        
+                        <div className="border rounded-lg overflow-hidden">
+                          <table className="w-full">
+                            <thead className="bg-muted">
+                              <tr>
+                                <th className="text-left p-3 font-medium">Funcionalidade</th>
+                                {Object.entries(ACTION_LABELS).map(([key, label]) => (
+                                  <th key={key} className="text-center p-3 font-medium">{label}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {availableEntities.map((entityKey) => {
+                                const permission = user.permissions.find(p => p.entity_key === entityKey);
+                                
+                                return (
+                                  <tr key={entityKey} className="border-t">
+                                    <td className="p-3 font-medium">{ENTITY_LABELS[entityKey] || entityKey}</td>
+                                    {(['can_view', 'can_create', 'can_edit', 'can_delete'] as const).map((action) => (
+                                      <td key={action} className="p-3 text-center">
+                                        <div className="flex justify-center">
+                                          <Checkbox
+                                            checked={permission?.[action] ?? true}
+                                            onCheckedChange={(checked) => 
+                                              handlePermissionChange(user.id, entityKey, action, checked as boolean)
+                                            }
+                                            disabled={updatePermission.isPending || !canEditUser(user.role)}
+                                          />
+                                        </div>
+                                      </td>
+                                    ))}
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+
+              <DataPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={setCurrentPage}
+              />
+            </>
           )}
         </CardContent>
       </Card>

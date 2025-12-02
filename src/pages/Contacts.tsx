@@ -31,6 +31,8 @@ import { Plus, Users, MoreVertical, Edit, Trash2 } from 'lucide-react';
 import { SearchInput } from '@/components/SearchInput';
 import { DataTableWrapper } from '@/components/DataTableWrapper';
 import { useUserEntityPermissions } from '@/hooks/useUserEntityPermissions';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/DataPagination';
 
 const Contacts = () => {
   const { hasPermission } = useUserEntityPermissions();
@@ -40,6 +42,16 @@ const Contacts = () => {
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
 
   const { contacts, isLoading, createContact, updateContact, deleteContact } = useContacts(searchQuery);
+
+  const {
+    currentPage,
+    setCurrentPage,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+  } = usePagination(contacts, 8);
 
   const handleCreateContact = async (data: any) => {
     await createContact.mutateAsync(data);
@@ -144,55 +156,66 @@ const Contacts = () => {
           )}
         </div>
       ) : (
-        <DataTableWrapper>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Cargo</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {contacts.map((contact) => (
-                <TableRow key={contact.id}>
-                  <TableCell className="font-medium">{contact.name}</TableCell>
-                  <TableCell>{contact.position || '-'}</TableCell>
-                  <TableCell>{contact.email || '-'}</TableCell>
-                  <TableCell>{contact.phone || '-'}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-background">
-                        {hasPermission('contacts', 'edit') && (
-                          <DropdownMenuItem onClick={() => handleEdit(contact)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Editar
-                          </DropdownMenuItem>
-                        )}
-                        {hasPermission('contacts', 'delete') && (
-                          <DropdownMenuItem 
-                            onClick={() => handleDelete(contact)}
-                            className="text-destructive focus:text-destructive"
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Excluir
-                          </DropdownMenuItem>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
+        <>
+          <DataTableWrapper>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Cargo</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </DataTableWrapper>
+              </TableHeader>
+              <TableBody>
+                {paginatedItems.map((contact) => (
+                  <TableRow key={contact.id}>
+                    <TableCell className="font-medium">{contact.name}</TableCell>
+                    <TableCell>{contact.position || '-'}</TableCell>
+                    <TableCell>{contact.email || '-'}</TableCell>
+                    <TableCell>{contact.phone || '-'}</TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-background">
+                          {hasPermission('contacts', 'edit') && (
+                            <DropdownMenuItem onClick={() => handleEdit(contact)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission('contacts', 'delete') && (
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(contact)}
+                              className="text-destructive focus:text-destructive"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Excluir
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </DataTableWrapper>
+
+          <DataPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            startIndex={startIndex}
+            endIndex={endIndex}
+            onPageChange={setCurrentPage}
+          />
+        </>
       )}
 
       {/* Form Dialog */}
