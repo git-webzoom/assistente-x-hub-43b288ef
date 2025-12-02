@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { TagDialog } from '@/components/TagDialog';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { SearchInput } from '@/components/SearchInput';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/DataPagination';
 
 export default function TagSettings() {
   const { tags, isLoading, createTag, updateTag, deleteTag } = useTags();
@@ -14,6 +17,21 @@ export default function TagSettings() {
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [tagToDelete, setTagToDelete] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredTags = tags?.filter((tag) =>
+    tag.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const {
+    currentPage,
+    setCurrentPage,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+  } = usePagination(filteredTags, 8);
 
   const handleOpenDialog = (tag?: Tag) => {
     setEditingTag(tag || null);
@@ -66,65 +84,84 @@ export default function TagSettings() {
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Buscar por nome..."
+        />
+
         {isLoading ? (
           <div className="text-center py-8 text-muted-foreground">
             Carregando tags...
           </div>
-        ) : tags.length === 0 ? (
+        ) : filteredTags && filteredTags.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <p>Nenhuma tag criada ainda.</p>
-            <p className="text-sm mt-2">
-              Clique em "Nova Tag" para criar sua primeira tag.
-            </p>
+            <p>{searchQuery ? 'Nenhuma tag encontrada.' : 'Nenhuma tag criada ainda.'}</p>
+            {!searchQuery && (
+              <p className="text-sm mt-2">
+                Clique em "Nova Tag" para criar sua primeira tag.
+              </p>
+            )}
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Preview</TableHead>
-                <TableHead>Criada em</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {tags.map((tag) => (
-                <TableRow key={tag.id}>
-                  <TableCell className="font-medium">{tag.name}</TableCell>
-                  <TableCell>
-                    <Badge
-                      className="text-white"
-                      style={{ backgroundColor: tag.color || '#64748b' }}
-                    >
-                      {tag.name}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(tag.created_at).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleOpenDialog(tag)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(tag.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Preview</TableHead>
+                  <TableHead>Criada em</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {paginatedItems.map((tag) => (
+                  <TableRow key={tag.id}>
+                    <TableCell className="font-medium">{tag.name}</TableCell>
+                    <TableCell>
+                      <Badge
+                        className="text-white"
+                        style={{ backgroundColor: tag.color || '#64748b' }}
+                      >
+                        {tag.name}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(tag.created_at).toLocaleDateString('pt-BR')}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenDialog(tag)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(tag.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            <DataPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </CardContent>
 

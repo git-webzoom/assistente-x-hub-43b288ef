@@ -45,6 +45,8 @@ import { useCustomFields } from '@/hooks/useCustomFields';
 import { CategorySelector } from '@/components/CategorySelector';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { useUserEntityPermissions } from '@/hooks/useUserEntityPermissions';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/DataPagination';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -103,6 +105,21 @@ export default function Products() {
     stock: 0,
     is_active: true,
   });
+
+  const filteredProducts = products?.filter((product) =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const {
+    currentPage,
+    setCurrentPage,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+  } = usePagination(filteredProducts, 8);
 
   const handleOpenDialog = (product?: Product) => {
     if (product) {
@@ -242,11 +259,6 @@ export default function Products() {
     }
   };
 
-  const filteredProducts = products?.filter((product) =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.sku?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const copyProductUrl = (slug: string) => {
     const url = `${window.location.origin}/p/${slug}`;
     navigator.clipboard.writeText(url);
@@ -300,8 +312,8 @@ export default function Products() {
                   </TableCell>
                 </TableRow>
               ))
-            ) : filteredProducts && filteredProducts.length > 0 ? (
-              filteredProducts.map((product) => (
+            ) : paginatedItems && paginatedItems.length > 0 ? (
+              paginatedItems.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -408,6 +420,17 @@ export default function Products() {
         </Table>
       </DataTableWrapper>
 
+      {filteredProducts && filteredProducts.length > 0 && (
+        <DataPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          startIndex={startIndex}
+          endIndex={endIndex}
+          onPageChange={setCurrentPage}
+        />
+      )}
+
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
@@ -484,24 +507,15 @@ export default function Products() {
                 />
               </div>
 
-              <div className="col-span-2 space-y-2">
-                <Label>Categorias</Label>
-                <CategorySelector
-                  selectedCategoryIds={selectedCategoryIds}
-                  onChange={setSelectedCategoryIds}
-                />
-              </div>
-
               <div className="space-y-2">
-                <Label htmlFor="price">Preço de Venda *</Label>
+                <Label htmlFor="price">Preço *</Label>
                 <Input
                   id="price"
                   type="number"
                   step="0.01"
-                  min="0"
                   required
                   value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
                 />
               </div>
 
@@ -511,83 +525,72 @@ export default function Products() {
                   id="cost"
                   type="number"
                   step="0.01"
-                  min="0"
                   value={formData.cost}
-                  onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) })}
+                  onChange={(e) => setFormData({ ...formData, cost: parseFloat(e.target.value) || 0 })}
                 />
               </div>
 
-              {(!editingProduct || customFields === undefined || !customFields.some(field => field.has_stock_control)) && (
-                <div className="space-y-2">
-                  <Label htmlFor="stock">Estoque</Label>
-                  <Input
-                    id="stock"
-                    type="number"
-                    min="0"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
-                  />
-                </div>
-              )}
-
               <div className="space-y-2">
-                <Label htmlFor="is_active">Status</Label>
-                <div className="flex items-center gap-2 h-10">
-                  <Switch
-                    id="is_active"
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  />
-                  <span className="text-sm">
-                    {formData.is_active ? 'Ativo' : 'Inativo'}
-                  </span>
-                </div>
+                <Label htmlFor="stock">Estoque</Label>
+                <Input
+                  id="stock"
+                  type="number"
+                  value={formData.stock}
+                  onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) || 0 })}
+                  disabled={editingProduct && customFields?.some(f => f.has_stock_control)}
+                />
+              </div>
+
+              <div className="col-span-2 space-y-2">
+                <Label>Categorias</Label>
+                <CategorySelector
+                  selectedCategoryIds={selectedCategoryIds}
+                  onChange={setSelectedCategoryIds}
+                />
+              </div>
+
+              <div className="col-span-2 flex items-center gap-2">
+                <Switch
+                  id="is_active"
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                />
+                <Label htmlFor="is_active">Produto Ativo</Label>
               </div>
             </div>
 
             <CustomFieldsSection
               entityType="product"
               entityId={editingProduct?.id}
-              productId={editingProduct?.id}
             />
               </TabsContent>
 
               <TabsContent value="images" className="space-y-4">
                 <ProductImageUpload
+                  existingImages={existingImages || []}
                   pendingImages={pendingImages}
-                  onImagesChange={setPendingImages}
-                  maxImages={10}
-                  existingImages={existingImages?.filter(img => img.public_url).map(img => ({
-                    id: img.id,
-                    public_url: img.public_url!,
-                    is_primary: img.is_primary,
-                    metadata: { alt_text: img.alt_text || undefined }
-                  })) || []}
-                  onDeleteExisting={(imageId) => {
-                    const image = existingImages?.find(img => img.id === imageId);
-                    if (image) {
-                      setImagesToDelete([...imagesToDelete, { id: imageId, storagePath: image.storage_path }]);
-                    }
+                  onPendingImagesChange={setPendingImages}
+                  onDeleteExistingImage={(id, storagePath) => {
+                    setImagesToDelete(prev => [...prev, { id, storagePath }]);
                   }}
-                  onSetExistingPrimary={async (imageId) => {
-                    if (editingProduct) {
-                      await setPrimaryImage({ productId: editingProduct.id, imageId });
-                    }
+                  onSetPrimary={async (imageId) => {
+                    await setPrimaryImage(imageId);
                   }}
+                  imagesToDelete={imagesToDelete}
                 />
               </TabsContent>
-          </form>
 
-          {editingProduct && (
-            <TabsContent value="variations" className="space-y-4 pt-4">
-              <ProductVariationStockManager productId={editingProduct.id} />
-            </TabsContent>
-          )}
+              <TabsContent value="variations" className="space-y-4">
+                {editingProduct && (
+                  <ProductVariationStockManager productId={editingProduct.id} />
+                )}
+              </TabsContent>
+            </form>
           </Tabs>
         </div>
 
         <DialogFooter className="flex-shrink-0">
-          <Button type="button" variant="outline" onClick={handleCloseDialog} disabled={isSubmitting}>
+          <Button type="button" variant="outline" onClick={handleCloseDialog}>
             Cancelar
           </Button>
           <Button type="submit" form="product-form" disabled={isSubmitting}>

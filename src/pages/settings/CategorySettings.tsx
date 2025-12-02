@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { CategoryDialog } from '@/components/CategoryDialog';
 import { Pencil, Trash2, Plus } from 'lucide-react';
+import { SearchInput } from '@/components/SearchInput';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/DataPagination';
 
 export default function CategorySettings() {
   const { categories, isLoading, createCategory, updateCategory, deleteCategory } = useCategories();
@@ -14,6 +17,22 @@ export default function CategorySettings() {
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredCategories = categories?.filter((category) =>
+    category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    category.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const {
+    currentPage,
+    setCurrentPage,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+  } = usePagination(filteredCategories, 8);
 
   const handleOpenDialog = (category?: Category) => {
     setEditingCategory(category || null);
@@ -66,71 +85,90 @@ export default function CategorySettings() {
           </Button>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <SearchInput
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Buscar por nome ou descrição..."
+        />
+
         {isLoading ? (
           <div className="text-center py-8 text-muted-foreground">
             Carregando categorias...
           </div>
-        ) : categories.length === 0 ? (
+        ) : filteredCategories && filteredCategories.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
-            <p>Nenhuma categoria criada ainda.</p>
-            <p className="text-sm mt-2">
-              Clique em "Nova Categoria" para criar sua primeira categoria.
-            </p>
+            <p>{searchQuery ? 'Nenhuma categoria encontrada.' : 'Nenhuma categoria criada ainda.'}</p>
+            {!searchQuery && (
+              <p className="text-sm mt-2">
+                Clique em "Nova Categoria" para criar sua primeira categoria.
+              </p>
+            )}
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Preview</TableHead>
-                <TableHead>Criada em</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {categories.map((category) => (
-                <TableRow key={category.id}>
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {category.description || '-'}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      className="text-white"
-                      style={{ backgroundColor: category.color || '#64748b' }}
-                    >
-                      {category.name}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {new Date(category.created_at).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleOpenDialog(category)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(category.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Descrição</TableHead>
+                  <TableHead>Preview</TableHead>
+                  <TableHead>Criada em</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {paginatedItems.map((category) => (
+                  <TableRow key={category.id}>
+                    <TableCell className="font-medium">{category.name}</TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {category.description || '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        className="text-white"
+                        style={{ backgroundColor: category.color || '#64748b' }}
+                      >
+                        {category.name}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {new Date(category.created_at).toLocaleDateString('pt-BR')}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenDialog(category)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(category.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            <DataPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </CardContent>
 

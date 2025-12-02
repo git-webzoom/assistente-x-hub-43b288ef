@@ -20,6 +20,8 @@ import { Shield, Settings, Users, History, CheckCircle2, XCircle, Loader2, Plus 
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
+import { usePagination } from '@/hooks/usePagination';
+import { DataPagination } from '@/components/DataPagination';
 
 export default function SuperAdmin() {
   return (
@@ -212,6 +214,21 @@ function TenantsSection() {
   const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  const filteredTenants = tenants.filter(tenant =>
+    tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    tenant.id.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const {
+    currentPage,
+    setCurrentPage,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+  } = usePagination(filteredTenants, 8);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -227,11 +244,6 @@ function TenantsSection() {
       return <TenantDetail tenant={tenant} onBack={() => setSelectedTenant(null)} />;
     }
   }
-
-  const filteredTenants = tenants.filter(tenant =>
-    tenant.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    tenant.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   return (
     <div className="space-y-4">
@@ -250,7 +262,7 @@ function TenantsSection() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {filteredTenants.map((tenant) => (
+            {paginatedItems.map((tenant) => (
               <div
                 key={tenant.id}
                 className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent/50 transition-colors"
@@ -275,6 +287,17 @@ function TenantsSection() {
               </div>
             ))}
           </div>
+
+          {filteredTenants.length > 0 && (
+            <DataPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              startIndex={startIndex}
+              endIndex={endIndex}
+              onPageChange={setCurrentPage}
+            />
+          )}
         </CardContent>
       </Card>
     </div>
@@ -545,6 +568,23 @@ function CreateTenantSection() {
 
 function AuditSection() {
   const { logs, isLoading } = useAuditLog();
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const filteredLogs = logs.filter(log =>
+    log.table_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    log.tenant_id?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const {
+    currentPage,
+    setCurrentPage,
+    paginatedItems,
+    totalPages,
+    totalItems,
+    startIndex,
+    endIndex,
+  } = usePagination(filteredLogs, 8);
 
   if (isLoading) {
     return <div>Carregando logs...</div>;
@@ -556,27 +596,46 @@ function AuditSection() {
         <CardTitle>Log de Auditoria Global</CardTitle>
         <CardDescription>Últimas 100 ações no sistema</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        <SearchInput
+          value={searchTerm}
+          onChange={setSearchTerm}
+          placeholder="Buscar por tabela, ação ou tenant..."
+        />
+
         <div className="space-y-2">
-          {logs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum registro encontrado</p>
+          {filteredLogs.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {searchTerm ? 'Nenhum registro encontrado.' : 'Nenhum registro encontrado'}
+            </p>
           ) : (
-            logs.map((log) => (
-              <div key={log.id} className="p-3 border rounded-lg text-sm">
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{log.action}</Badge>
-                    <span className="text-muted-foreground">{log.table_name}</span>
+            <>
+              {paginatedItems.map((log) => (
+                <div key={log.id} className="p-3 border rounded-lg text-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline">{log.action}</Badge>
+                      <span className="text-muted-foreground">{log.table_name}</span>
+                    </div>
+                    <span className="text-muted-foreground">
+                      {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}
+                    </span>
                   </div>
-                  <span className="text-muted-foreground">
-                    {format(new Date(log.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: ptBR })}
-                  </span>
+                  <p className="text-muted-foreground">
+                    Tenant: {log.tenant_id || 'N/A'} | Record: {log.record_id}
+                  </p>
                 </div>
-                <p className="text-muted-foreground">
-                  Tenant: {log.tenant_id || 'N/A'} | Record: {log.record_id}
-                </p>
-              </div>
-            ))
+              ))}
+
+              <DataPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                startIndex={startIndex}
+                endIndex={endIndex}
+                onPageChange={setCurrentPage}
+              />
+            </>
           )}
         </div>
       </CardContent>
