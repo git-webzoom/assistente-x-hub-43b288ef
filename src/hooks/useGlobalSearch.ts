@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useCurrentUser } from './useCurrentUser';
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 
 export interface SearchResult {
   id: string;
@@ -13,99 +13,110 @@ export interface SearchResult {
 
 export const useGlobalSearch = (query: string) => {
   const { currentUser } = useCurrentUser();
+  const [debouncedQuery, setDebouncedQuery] = useState('');
 
-  const { data: results, isLoading } = useQuery({
-    queryKey: ['global-search', currentUser?.tenant_id, query],
+  // Debounce de 300ms para evitar requisições excessivas
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query.trim());
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const { data: results, isLoading, isFetching } = useQuery({
+    queryKey: ['global-search', currentUser?.tenant_id, debouncedQuery],
     queryFn: async () => {
-      if (!currentUser?.tenant_id || !query.trim()) return [];
+      if (!currentUser?.tenant_id || !debouncedQuery) return [];
 
-      const searchTerm = `%${query}%`;
+      const searchTerm = `%${debouncedQuery}%`;
+      const tenantId = currentUser.tenant_id;
+
+      // Executar todas as queries em paralelo
+      const [contactsRes, cardsRes, tasksRes, productsRes] = await Promise.all([
+        supabase
+          .from('contacts')
+          .select('id, name, email, company')
+          .eq('tenant_id', tenantId)
+          .or(`name.ilike.${searchTerm},email.ilike.${searchTerm},company.ilike.${searchTerm}`)
+          .limit(5),
+
+        supabase
+          .from('cards')
+          .select('id, title, description')
+          .eq('tenant_id', tenantId)
+          .or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`)
+          .limit(5),
+
+        supabase
+          .from('tasks')
+          .select('id, title, description')
+          .eq('tenant_id', tenantId)
+          .or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`)
+          .limit(5),
+
+        supabase
+          .from('products')
+          .select('id, name, description, sku')
+          .eq('tenant_id', tenantId)
+          .or(`name.ilike.${searchTerm},description.ilike.${searchTerm},sku.ilike.${searchTerm}`)
+          .limit(5),
+      ]);
+
+      const contactsResult = contactsRes.data || [];
+      const cardsResult = cardsRes.data || [];
+      const tasksResult = tasksRes.data || [];
+      const productsResult = productsRes.data || [];
+
       const results: SearchResult[] = [];
 
-      // Buscar em Contatos
-      const { data: contacts } = await supabase
-        .from('contacts')
-        .select('id, name, email, company')
-        .eq('tenant_id', currentUser.tenant_id)
-        .or(`name.ilike.${searchTerm},email.ilike.${searchTerm},company.ilike.${searchTerm}`)
-        .limit(5);
+      // Mapear contatos
+      contactsResult.forEach((c) => {
+        results.push({
+          id: c.id,
+          title: c.name || c.email,
+          subtitle: c.company || c.email,
+          type: 'contact',
+          path: '/dashboard/contacts',
+        });
+      });
 
-      if (contacts) {
-        results.push(
-          ...contacts.map((c) => ({
-            id: c.id,
-            title: c.name || c.email,
-            subtitle: c.company || c.email,
-            type: 'contact' as const,
-            path: `/dashboard/contacts`,
-          }))
-        );
-      }
+      // Mapear cards
+      cardsResult.forEach((c) => {
+        results.push({
+          id: c.id,
+          title: c.title,
+          subtitle: c.description,
+          type: 'card',
+          path: '/dashboard/pipelines',
+        });
+      });
 
-      // Buscar em Cards
-      const { data: cards } = await supabase
-        .from('cards')
-        .select('id, title, description')
-        .eq('tenant_id', currentUser.tenant_id)
-        .or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`)
-        .limit(5);
+      // Mapear tarefas
+      tasksResult.forEach((t) => {
+        results.push({
+          id: t.id,
+          title: t.title,
+          subtitle: t.description,
+          type: 'task',
+          path: '/dashboard/tasks',
+        });
+      });
 
-      if (cards) {
-        results.push(
-          ...cards.map((c) => ({
-            id: c.id,
-            title: c.title,
-            subtitle: c.description,
-            type: 'card' as const,
-            path: `/dashboard/pipelines`,
-          }))
-        );
-      }
-
-      // Buscar em Tarefas
-      const { data: tasks } = await supabase
-        .from('tasks')
-        .select('id, title, description')
-        .eq('tenant_id', currentUser.tenant_id)
-        .or(`title.ilike.${searchTerm},description.ilike.${searchTerm}`)
-        .limit(5);
-
-      if (tasks) {
-        results.push(
-          ...tasks.map((t) => ({
-            id: t.id,
-            title: t.title,
-            subtitle: t.description,
-            type: 'task' as const,
-            path: `/dashboard/tasks`,
-          }))
-        );
-      }
-
-      // Buscar em Produtos
-      const { data: products } = await supabase
-        .from('products')
-        .select('id, name, description, sku')
-        .eq('tenant_id', currentUser.tenant_id)
-        .or(`name.ilike.${searchTerm},description.ilike.${searchTerm},sku.ilike.${searchTerm}`)
-        .limit(5);
-
-      if (products) {
-        results.push(
-          ...products.map((p) => ({
-            id: p.id,
-            title: p.name,
-            subtitle: p.description || p.sku,
-            type: 'product' as const,
-            path: `/dashboard/products`,
-          }))
-        );
-      }
+      // Mapear produtos
+      productsResult.forEach((p) => {
+        results.push({
+          id: p.id,
+          title: p.name,
+          subtitle: p.description || p.sku,
+          type: 'product',
+          path: '/dashboard/products',
+        });
+      });
 
       return results;
     },
-    enabled: !!currentUser?.tenant_id && query.trim().length > 0,
-    staleTime: 30 * 1000, // 30 segundos
+    enabled: !!currentUser?.tenant_id && debouncedQuery.length > 0,
+    staleTime: 30 * 1000,
   });
 
   const groupedResults = useMemo(() => {
@@ -123,6 +134,7 @@ export const useGlobalSearch = (query: string) => {
   return {
     results: results || [],
     groupedResults,
-    isLoading,
+    isLoading: isLoading || isFetching,
+    isDebouncing: query.trim() !== debouncedQuery,
   };
 };
