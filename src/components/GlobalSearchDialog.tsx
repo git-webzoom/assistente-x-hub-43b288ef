@@ -22,7 +22,7 @@ export function GlobalSearchDialog() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
-  const { groupedResults, isLoading } = useGlobalSearch(query);
+  const { groupedResults, isLoading, isDebouncing } = useGlobalSearch(query);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -42,6 +42,16 @@ export function GlobalSearchDialog() {
     setQuery('');
   };
 
+  const handleOpenChange = (newOpen: boolean) => {
+    setOpen(newOpen);
+    if (!newOpen) {
+      setQuery('');
+    }
+  };
+
+  const showLoading = isLoading || isDebouncing;
+  const hasResults = Object.keys(groupedResults).length > 0;
+
   return (
     <>
       <div
@@ -50,13 +60,13 @@ export function GlobalSearchDialog() {
       >
         <input
           type="text"
-          placeholder="Buscar... (Ctrl+K)"
+          placeholder="Busca geral (Ctrl+K)"
           className="flex h-10 w-full rounded-md bg-transparent px-3 py-2 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
           readOnly
         />
       </div>
 
-      <CommandDialog open={open} onOpenChange={setOpen}>
+      <CommandDialog open={open} onOpenChange={handleOpenChange}>
         <CommandInput
           placeholder="Buscar contatos, cards, tarefas, produtos..."
           value={query}
@@ -64,7 +74,7 @@ export function GlobalSearchDialog() {
         />
         <CommandList>
           <CommandEmpty>
-            {isLoading ? 'Buscando...' : 'Nenhum resultado encontrado.'}
+            {showLoading ? 'Buscando...' : query.trim() ? 'Nenhum resultado encontrado.' : 'Digite para buscar...'}
           </CommandEmpty>
 
           {Object.entries(groupedResults).map(([type, items]) => {
