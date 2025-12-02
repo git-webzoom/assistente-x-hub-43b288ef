@@ -28,7 +28,7 @@ export const useGlobalSearch = (query: string) => {
     queryFn: async () => {
       if (!currentUser?.tenant_id || !debouncedQuery) return [];
 
-      const searchTerm = `*${debouncedQuery}*`;
+      const searchTerm = `%${debouncedQuery}%`;
       const tenantId = currentUser.tenant_id;
 
       console.log('[GlobalSearch] Buscando:', { tenantId, debouncedQuery, searchTerm });
