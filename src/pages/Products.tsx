@@ -567,16 +567,27 @@ export default function Products() {
 
               <TabsContent value="images" className="space-y-4">
                 <ProductImageUpload
-                  existingImages={existingImages || []}
+                  existingImages={(existingImages || [])
+                    .filter((img): img is typeof img & { public_url: string } => !!img.public_url)
+                    .map(img => ({
+                      id: img.id,
+                      public_url: img.public_url,
+                      is_primary: img.is_primary,
+                      metadata: img.alt_text ? { alt_text: img.alt_text } : undefined,
+                    }))}
                   pendingImages={pendingImages}
-                  onPendingImagesChange={setPendingImages}
-                  onDeleteExistingImage={(id, storagePath) => {
-                    setImagesToDelete(prev => [...prev, { id, storagePath }]);
+                  onImagesChange={setPendingImages}
+                  onDeleteExisting={(imageId) => {
+                    const img = existingImages?.find(i => i.id === imageId);
+                    if (img?.storage_path) {
+                      setImagesToDelete(prev => [...prev, { id: imageId, storagePath: img.storage_path! }]);
+                    }
                   }}
-                  onSetPrimary={async (imageId) => {
-                    await setPrimaryImage(imageId);
+                  onSetExistingPrimary={async (imageId) => {
+                    if (editingProduct) {
+                      await setPrimaryImage({ imageId, productId: editingProduct.id });
+                    }
                   }}
-                  imagesToDelete={imagesToDelete}
                 />
               </TabsContent>
 
