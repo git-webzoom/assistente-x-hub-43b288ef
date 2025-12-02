@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './useAuth';
 import { toast } from './use-toast';
+import { useUserRole, AppRole } from './useUserRole';
 
 export interface UserWithPermissions {
   id: string;
@@ -21,12 +22,27 @@ export interface UserWithPermissions {
 
 const ENTITIES = ['contacts', 'products', 'pipelines', 'tasks', 'calendar', 'settings'];
 
+// Define which roles each role can see
+const getVisibleRoles = (currentRole: AppRole | null): string[] => {
+  switch (currentRole) {
+    case 'superadmin':
+      return ['superadmin', 'admin', 'supervisor', 'user'];
+    case 'admin':
+      return ['supervisor', 'user'];
+    case 'supervisor':
+      return ['user'];
+    default:
+      return [];
+  }
+};
+
 export const useManageUserPermissions = () => {
   const { user } = useAuth();
+  const { role: currentUserRole } = useUserRole();
   const queryClient = useQueryClient();
 
   const { data: usersWithPermissions, isLoading } = useQuery({
-    queryKey: ['users-with-permissions', user?.id],
+    queryKey: ['users-with-permissions', user?.id, currentUserRole],
     queryFn: async () => {
       if (!user?.id) throw new Error('User not authenticated');
 
@@ -79,9 +95,13 @@ export const useManageUserPermissions = () => {
         })) || [],
       })) || [];
 
-      return usersWithPerms;
+      // Filter users based on current user's role visibility rules
+      const visibleRoles = getVisibleRoles(currentUserRole);
+      const filteredUsers = usersWithPerms.filter(u => visibleRoles.includes(u.role));
+
+      return filteredUsers;
     },
-    enabled: !!user?.id,
+    enabled: !!user?.id && !!currentUserRole,
   });
 
   const updatePermission = useMutation({
@@ -159,5 +179,6 @@ export const useManageUserPermissions = () => {
     updatePermission,
     resetPermissions,
     availableEntities: ENTITIES,
+    currentUserRole,
   };
 };

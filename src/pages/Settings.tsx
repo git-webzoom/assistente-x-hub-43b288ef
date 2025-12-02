@@ -9,7 +9,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 
 export default function Settings() {
   const { role } = useUserRole();
-  const isAdmin = role === 'admin' || role === 'superadmin';
+  const canManageUsers = role === 'admin' || role === 'superadmin' || role === 'supervisor';
 
   return (
     <div className="space-y-6">
@@ -27,7 +27,7 @@ export default function Settings() {
           <TabsTrigger value="categories">Categorias</TabsTrigger>
           <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
           <TabsTrigger value="api">API</TabsTrigger>
-          {isAdmin && <TabsTrigger value="users">Usuários</TabsTrigger>}
+          {canManageUsers && <TabsTrigger value="users">Usuários</TabsTrigger>}
         </TabsList>
 
         <TabsContent value="custom-fields">
@@ -50,7 +50,7 @@ export default function Settings() {
           <ApiKeySettings />
         </TabsContent>
 
-        {isAdmin && (
+        {canManageUsers && (
           <TabsContent value="users">
             <UserSettings />
           </TabsContent>
