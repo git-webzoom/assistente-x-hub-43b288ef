@@ -46,8 +46,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { CustomFieldsSection } from '@/components/CustomFieldsSection';
 import { ContactSelect } from '@/components/ContactSelect';
 import { UserSelect } from '@/components/UserSelect';
+import { useUserEntityPermissions } from '@/hooks/useUserEntityPermissions';
 
 export default function Calendar() {
+  const { hasPermission } = useUserEntityPermissions();
   const { appointments, isLoading, createAppointment, updateAppointment, deleteAppointment } =
     useAppointments();
   const { contacts } = useContacts();
@@ -192,10 +194,12 @@ export default function Calendar() {
           <h1 className="text-3xl font-bold">Agenda</h1>
           <p className="text-muted-foreground mt-1">Gerencie seus compromissos e reuniões</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Compromisso
-        </Button>
+        {hasPermission('calendar', 'create') && (
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Compromisso
+          </Button>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-[1fr_360px] gap-6">
@@ -323,22 +327,26 @@ export default function Calendar() {
                                         )}
                                       </div>
                                       <div className="flex items-center gap-1">
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-6 w-6"
-                                          onClick={() => handleOpenDialog(appointment)}
-                                        >
-                                          <Pencil className="w-3 h-3" />
-                                        </Button>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-6 w-6"
-                                          onClick={() => handleDelete(appointment.id)}
-                                        >
-                                          <Trash2 className="w-3 h-3 text-destructive" />
-                                        </Button>
+                                        {hasPermission('calendar', 'edit') && (
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6"
+                                            onClick={() => handleOpenDialog(appointment)}
+                                          >
+                                            <Pencil className="w-3 h-3" />
+                                          </Button>
+                                        )}
+                                        {hasPermission('calendar', 'delete') && (
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6"
+                                            onClick={() => handleDelete(appointment.id)}
+                                          >
+                                            <Trash2 className="w-3 h-3 text-destructive" />
+                                          </Button>
+                                        )}
                                       </div>
                                     </div>
                                   </div>
@@ -377,13 +385,15 @@ export default function Calendar() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">Próximos Compromissos</h3>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleOpenDialog(undefined, selectedDate || new Date())}
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
+              {hasPermission('calendar', 'create') && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleOpenDialog(undefined, selectedDate || new Date())}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              )}
             </div>
 
             <ScrollArea className="h-[600px]">

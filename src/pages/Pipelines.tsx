@@ -27,6 +27,7 @@ import { CardDialog } from "@/components/CardDialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UserSelect } from "@/components/UserSelect";
 import { useUserRole } from "@/hooks/useUserRole";
+import { useUserEntityPermissions } from "@/hooks/useUserEntityPermissions";
 import {
   DndContext,
   DragEndEvent,
@@ -54,9 +55,11 @@ interface DraggableCardProps {
   };
   onDelete: (id: string) => void;
   onEdit: (card: DraggableCardProps["card"]) => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }
 
-const DraggableCard = ({ card, onDelete, onEdit }: DraggableCardProps) => {
+const DraggableCard = ({ card, onDelete, onEdit, canEdit = true, canDelete = true }: DraggableCardProps) => {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: card.id, data: { type: "card", stageId: card.stage_id } });
 
@@ -76,22 +79,28 @@ const DraggableCard = ({ card, onDelete, onEdit }: DraggableCardProps) => {
     >
       <div className="flex items-start justify-between mb-3">
         <h4 className="font-medium text-sm">{card.title}</h4>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-6 w-6">
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <DropdownMenuItem onClick={() => onEdit(card)}>
-              <Pencil className="w-4 h-4 mr-2" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onDelete(card.id)} className="text-ax-error">
-              Excluir
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {(canEdit || canDelete) && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-6 w-6">
+                <MoreVertical className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {canEdit && (
+                <DropdownMenuItem onClick={() => onEdit(card)}>
+                  <Pencil className="w-4 h-4 mr-2" />
+                  Editar
+                </DropdownMenuItem>
+              )}
+              {canDelete && (
+                <DropdownMenuItem onClick={() => onDelete(card.id)} className="text-ax-error">
+                  Excluir
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       <div className="flex items-center gap-2 mb-3">
@@ -132,6 +141,9 @@ const StageColumn = ({
   onEditCard,
   onRenameStage,
   getStageTotal,
+  canCreate,
+  canEdit,
+  canDelete,
 }: {
   stage: { id: string; name: string };
   cards: DraggableCardProps["card"][];
@@ -141,6 +153,9 @@ const StageColumn = ({
   onEditCard: (card: DraggableCardProps["card"]) => void;
   onRenameStage: (name: string) => void;
   getStageTotal: (stageId: string) => number;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
 }) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({
     id: stage.id,
@@ -193,33 +208,39 @@ const StageColumn = ({
               ) : (
                 <h3 className="font-semibold">{stage.name}</h3>
               )}
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditing((v) => !v)}>
-                <Pencil className="w-4 h-4" />
-              </Button>
+              {canEdit && (
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditing((v) => !v)}>
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onAddCard}
-                className="h-7 text-xs"
-              >
-                <Plus className="w-3 h-3 mr-1" />
-                Card
-              </Button>
+              {canCreate && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onAddCard}
+                  className="h-7 text-xs"
+                >
+                  <Plus className="w-3 h-3 mr-1" />
+                  Card
+                </Button>
+              )}
               <span className="text-sm text-muted-foreground">{cards.length}</span>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-6 w-6">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onClick={onDeleteStage} className="text-ax-error">
-                    Excluir etapa
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {canDelete && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-6 w-6">
+                      <MoreVertical className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={onDeleteStage} className="text-ax-error">
+                      Excluir etapa
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
           <div className="text-sm text-muted-foreground">
@@ -233,7 +254,7 @@ const StageColumn = ({
             data-stage-id={stage.id}
           >
             {cards.map((card) => (
-              <DraggableCard key={card.id} card={card} onDelete={onDeleteCard} onEdit={onEditCard} />
+              <DraggableCard key={card.id} card={card} onDelete={onDeleteCard} onEdit={onEditCard} canEdit={canEdit} canDelete={canDelete} />
             ))}
           </div>
         </SortableContext>
@@ -254,6 +275,7 @@ const Pipelines = () => {
   const [ownerFilter, setOwnerFilter] = useState<string | undefined>(undefined);
 
   const { isSupervisor } = useUserRole();
+  const { hasPermission } = useUserEntityPermissions();
   const { pipelines, isLoading: pipelinesLoading, createPipeline } = usePipelines();
   const { stages, isLoading: stagesLoading, createStage, deleteStage, updateStage, updateStageOrder } =
     useStages(selectedPipelineId);
@@ -500,16 +522,20 @@ const Pipelines = () => {
                   />
                 </div>
               )}
-              <Button variant="outline" onClick={() => setStageDialogOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Nova Etapa
-              </Button>
+              {hasPermission('pipelines', 'create') && (
+                <Button variant="outline" onClick={() => setStageDialogOpen(true)}>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Nova Etapa
+                </Button>
+              )}
             </>
           )}
-          <Button variant="default" onClick={() => setPipelineDialogOpen(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Nova Pipeline
-          </Button>
+          {hasPermission('pipelines', 'create') && (
+            <Button variant="default" onClick={() => setPipelineDialogOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Pipeline
+            </Button>
+          )}
         </div>
       </div>
       {pipelines && pipelines.length > 0 ? (
@@ -545,6 +571,9 @@ const Pipelines = () => {
                         onEditCard={handleEditCard}
                         onRenameStage={(name) => updateStage({ id: stage.id, name })}
                         getStageTotal={getStageTotal}
+                        canCreate={hasPermission('pipelines', 'create')}
+                        canEdit={hasPermission('pipelines', 'edit')}
+                        canDelete={hasPermission('pipelines', 'delete')}
                       />
                     );
                   })}
@@ -553,10 +582,12 @@ const Pipelines = () => {
                 <div className="flex items-center justify-center w-full h-64 text-muted-foreground">
                   <div className="text-center">
                     <p className="mb-4">Nenhuma etapa criada</p>
-                    <Button variant="outline" onClick={() => setStageDialogOpen(true)}>
-                      <Plus className="w-4 h-4 mr-2" />
-                      Criar primeira etapa
-                    </Button>
+                    {hasPermission('pipelines', 'create') && (
+                      <Button variant="outline" onClick={() => setStageDialogOpen(true)}>
+                        <Plus className="w-4 h-4 mr-2" />
+                        Criar primeira etapa
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
@@ -584,10 +615,12 @@ const Pipelines = () => {
             <p className="text-muted-foreground mb-6">
               Crie sua primeira pipeline para começar a gerenciar oportunidades
             </p>
-            <Button onClick={() => setPipelineDialogOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Criar Pipeline
-            </Button>
+            {hasPermission('pipelines', 'create') && (
+              <Button onClick={() => setPipelineDialogOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Criar Pipeline
+              </Button>
+            )}
           </div>
         </Card>
       )}

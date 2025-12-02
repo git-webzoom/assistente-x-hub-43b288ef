@@ -44,6 +44,7 @@ import ProductVariationStockManager from '@/components/ProductVariationStockMana
 import { useCustomFields } from '@/hooks/useCustomFields';
 import { CategorySelector } from '@/components/CategorySelector';
 import { useProductCategories } from '@/hooks/useProductCategories';
+import { useUserEntityPermissions } from '@/hooks/useUserEntityPermissions';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -77,6 +78,7 @@ const ProductCategoriesCell = ({ productId }: { productId: string }) => {
 
 export default function Products() {
   const { toast } = useToast();
+  const { hasPermission } = useUserEntityPermissions();
   const { products, isLoading, createProduct, createProductAsync, updateProduct, deleteProduct } = useProducts();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -261,10 +263,12 @@ export default function Products() {
           <h1 className="text-3xl font-bold">Produtos</h1>
           <p className="text-muted-foreground mt-1">Gerencie seu catálogo de produtos</p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Produto
-        </Button>
+        {hasPermission('products', 'create') && (
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Produto
+          </Button>
+        )}
       </div>
 
       <SearchInput
@@ -364,20 +368,24 @@ export default function Products() {
                       >
                         <ExternalLink className="w-4 h-4" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleOpenDialog(product)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete(product.id)}
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
+                      {hasPermission('products', 'edit') && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleOpenDialog(product)}
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
+                      )}
+                      {hasPermission('products', 'delete') && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDelete(product.id)}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
