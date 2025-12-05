@@ -88,16 +88,16 @@ const Contacts = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Contatos</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold">Contatos</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">
             Gerencie seus contatos e relacionamentos
           </p>
         </div>
         {hasPermission('contacts', 'create') && (
-          <Button onClick={handleNewContact}>
+          <Button onClick={handleNewContact} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Novo Contato
           </Button>
@@ -116,19 +116,19 @@ const Contacts = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Cargo</TableHead>
+                <TableHead className="hidden md:table-cell">Cargo</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Telefone</TableHead>
+                <TableHead className="hidden sm:table-cell">Telefone</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <TableRow key={i}>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24 md:w-32" /></TableCell>
+                  <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-28 md:w-40" /></TableCell>
+                  <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-28" /></TableCell>
                   <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                 </TableRow>
               ))}
@@ -136,14 +136,14 @@ const Contacts = () => {
           </Table>
         </DataTableWrapper>
       ) : contacts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Users className="w-8 h-8 text-primary" />
+        <div className="flex flex-col items-center justify-center py-12 md:py-16 text-center px-4">
+          <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+            <Users className="w-7 h-7 md:w-8 md:h-8 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold mb-2">
+          <h3 className="text-lg md:text-xl font-semibold mb-2">
             {searchQuery ? 'Nenhum contato encontrado' : 'Nenhum contato cadastrado'}
           </h3>
-          <p className="text-muted-foreground mb-6 max-w-md">
+          <p className="text-muted-foreground mb-6 max-w-md text-sm md:text-base">
             {searchQuery
               ? 'Tente ajustar sua busca ou limpar os filtros'
               : 'Comece adicionando seu primeiro contato para gerenciar seus relacionamentos'}
@@ -162,19 +162,27 @@ const Contacts = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Cargo</TableHead>
+                  <TableHead className="hidden md:table-cell">Cargo</TableHead>
                   <TableHead>Email</TableHead>
-                  <TableHead>Telefone</TableHead>
+                  <TableHead className="hidden sm:table-cell">Telefone</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedItems.map((contact) => (
                   <TableRow key={contact.id}>
-                    <TableCell className="font-medium">{contact.name}</TableCell>
-                    <TableCell>{contact.position || '-'}</TableCell>
-                    <TableCell>{contact.email || '-'}</TableCell>
-                    <TableCell>{contact.phone || '-'}</TableCell>
+                    <TableCell className="font-medium">
+                      <div>
+                        <span className="block">{contact.name}</span>
+                        {/* Show position on mobile under name */}
+                        <span className="block md:hidden text-xs text-muted-foreground">
+                          {contact.position || ''}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{contact.position || '-'}</TableCell>
+                    <TableCell className="max-w-[120px] md:max-w-none truncate">{contact.email || '-'}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{contact.phone || '-'}</TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
@@ -229,7 +237,7 @@ const Contacts = () => {
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!contactToDelete} onOpenChange={() => setContactToDelete(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
             <AlertDialogDescription>
@@ -237,11 +245,11 @@ const Contacts = () => {
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir
             </AlertDialogAction>

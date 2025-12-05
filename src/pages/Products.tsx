@@ -269,14 +269,14 @@ export default function Products() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Produtos</h1>
-          <p className="text-muted-foreground mt-1">Gerencie seu catálogo de produtos</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Produtos</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">Gerencie seu catálogo de produtos</p>
         </div>
         {hasPermission('products', 'create') && (
-          <Button onClick={() => handleOpenDialog()}>
+          <Button onClick={() => handleOpenDialog()} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Novo Produto
           </Button>
@@ -294,12 +294,12 @@ export default function Products() {
           <TableHeader>
             <TableRow>
               <TableHead>Produto</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Categorias</TableHead>
+              <TableHead className="hidden md:table-cell">SKU</TableHead>
+              <TableHead className="hidden lg:table-cell">Categorias</TableHead>
               <TableHead>Preço</TableHead>
-              <TableHead>Custo</TableHead>
-              <TableHead>Estoque</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead className="hidden lg:table-cell">Custo</TableHead>
+              <TableHead className="hidden sm:table-cell">Estoque</TableHead>
+              <TableHead className="hidden sm:table-cell">Status</TableHead>
               <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -330,25 +330,25 @@ export default function Products() {
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {product.sku ? (
                       <code className="text-xs bg-muted px-2 py-1 rounded">{product.sku}</code>
                     ) : (
                       <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <ProductCategoriesCell productId={product.id} />
                   </TableCell>
                   <TableCell className="font-medium">
                     R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </TableCell>
-                  <TableCell className="text-muted-foreground">
+                  <TableCell className="hidden lg:table-cell text-muted-foreground">
                     {product.cost
                       ? `R$ ${product.cost.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
                       : '-'}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {product.stock !== null ? (
                       <Badge variant={product.stock > 10 ? 'default' : 'destructive'}>
                         {product.stock} un
@@ -357,7 +357,7 @@ export default function Products() {
                       <span className="text-muted-foreground">-</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Badge variant={product.is_active ? 'default' : 'secondary'}>
                       {product.is_active ? 'Ativo' : 'Inativo'}
                     </Badge>
@@ -432,7 +432,7 @@ export default function Products() {
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</DialogTitle>
           <DialogDescription>

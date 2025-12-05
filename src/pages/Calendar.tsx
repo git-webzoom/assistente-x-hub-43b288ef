@@ -188,21 +188,21 @@ export default function Calendar() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Agenda</h1>
-          <p className="text-muted-foreground mt-1">Gerencie seus compromissos e reuniões</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Agenda</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">Gerencie seus compromissos e reuniões</p>
         </div>
         {hasPermission('calendar', 'create') && (
-          <Button onClick={() => handleOpenDialog()}>
+          <Button onClick={() => handleOpenDialog()} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Novo Compromisso
           </Button>
         )}
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_360px] gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 md:gap-6">
         {/* Calendário */}
         <Card className="p-6">
           <div className="space-y-4">
@@ -238,12 +238,13 @@ export default function Calendar() {
             {/* Grid do Calendário */}
             <div className="grid grid-cols-7 gap-1">
               {/* Dias da semana */}
-              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+              {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day, idx) => (
                 <div
                   key={day}
-                  className="text-center text-sm font-medium text-muted-foreground py-2"
+                  className="text-center text-xs md:text-sm font-medium text-muted-foreground py-1 md:py-2"
                 >
-                  {day}
+                  <span className="hidden sm:inline">{day}</span>
+                  <span className="sm:hidden">{day.charAt(0)}</span>
                 </div>
               ))}
 
@@ -363,17 +364,17 @@ export default function Calendar() {
             </div>
 
             {/* Legenda */}
-            <div className="flex items-center gap-4 pt-4 border-t text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-blue-500" />
+            <div className="flex flex-wrap items-center gap-2 md:gap-4 pt-4 border-t text-xs md:text-sm">
+              <div className="flex items-center gap-1 md:gap-2">
+                <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-blue-500" />
                 <span className="text-muted-foreground">Agendado</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-green-500" />
+              <div className="flex items-center gap-1 md:gap-2">
+                <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-green-500" />
                 <span className="text-muted-foreground">Concluído</span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-red-500" />
+              <div className="flex items-center gap-1 md:gap-2">
+                <div className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-red-500" />
                 <span className="text-muted-foreground">Cancelado</span>
               </div>
             </div>
@@ -487,7 +488,7 @@ export default function Calendar() {
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>
               {editingAppointment ? 'Editar Compromisso' : 'Novo Compromisso'}
@@ -521,7 +522,7 @@ export default function Calendar() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start_time">Data e Hora Início *</Label>
                   <Input
@@ -554,7 +555,7 @@ export default function Calendar() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="contact_id">Contato</Label>
                   <ContactSelect
@@ -604,11 +605,12 @@ export default function Calendar() {
             </form>
           </div>
 
-          <DialogFooter className="flex justify-between flex-shrink-0">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-between flex-shrink-0 gap-2">
             {editingAppointment && (
               <Button
                 type="button"
                 variant="destructive"
+                className="w-full sm:w-auto"
                 onClick={() => {
                   handleDelete(editingAppointment.id);
                   handleCloseDialog();
@@ -618,11 +620,11 @@ export default function Calendar() {
                 Excluir
               </Button>
             )}
-            <div className="flex gap-2 ml-auto">
-              <Button type="button" variant="outline" onClick={handleCloseDialog}>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto sm:ml-auto">
+              <Button type="button" variant="outline" onClick={handleCloseDialog} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button type="submit" form="appointment-form">
+              <Button type="submit" form="appointment-form" className="w-full sm:w-auto">
                 {editingAppointment ? 'Salvar Alterações' : 'Criar Compromisso'}
               </Button>
             </div>
@@ -631,18 +633,18 @@ export default function Calendar() {
       </Dialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir este compromisso? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setAppointmentToDelete(null)}>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => setAppointmentToDelete(null)} className="w-full sm:w-auto">
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive">
+            <AlertDialogAction onClick={confirmDelete} className="w-full sm:w-auto bg-destructive">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
