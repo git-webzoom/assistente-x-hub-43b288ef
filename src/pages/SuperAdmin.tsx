@@ -25,36 +25,41 @@ import { DataPagination } from '@/components/DataPagination';
 
 export default function SuperAdmin() {
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Shield className="h-8 w-8 text-primary" />
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex items-center gap-2 md:gap-3">
+        <Shield className="h-6 w-6 md:h-8 md:w-8 text-primary flex-shrink-0" />
         <div>
-          <h1 className="text-3xl font-bold">Super Admin</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl md:text-3xl font-bold">Super Admin</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">
             Gerenciamento global do sistema
           </p>
         </div>
       </div>
 
-      <Tabs defaultValue="settings" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="settings">
-            <Settings className="h-4 w-4 mr-2" />
-            Configurações
-          </TabsTrigger>
-          <TabsTrigger value="tenants">
-            <Users className="h-4 w-4 mr-2" />
-            Tenants
-          </TabsTrigger>
-          <TabsTrigger value="create-tenant">
-            <Plus className="h-4 w-4 mr-2" />
-            Criar Tenant
-          </TabsTrigger>
-          <TabsTrigger value="audit">
-            <History className="h-4 w-4 mr-2" />
-            Auditoria
-          </TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="settings" className="space-y-4 md:space-y-6">
+        <div className="overflow-x-auto -mx-3 px-3 md:mx-0 md:px-0">
+          <TabsList className="inline-flex w-max min-w-full md:w-auto md:min-w-0">
+            <TabsTrigger value="settings" className="text-xs md:text-sm whitespace-nowrap">
+              <Settings className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Configurações</span>
+              <span className="sm:hidden">Config</span>
+            </TabsTrigger>
+            <TabsTrigger value="tenants" className="text-xs md:text-sm whitespace-nowrap">
+              <Users className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+              Tenants
+            </TabsTrigger>
+            <TabsTrigger value="create-tenant" className="text-xs md:text-sm whitespace-nowrap">
+              <Plus className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Criar Tenant</span>
+              <span className="sm:hidden">Criar</span>
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="text-xs md:text-sm whitespace-nowrap">
+              <History className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+              <span className="hidden sm:inline">Auditoria</span>
+              <span className="sm:hidden">Audit</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="settings">
           <SystemSettingsSection />

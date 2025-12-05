@@ -7,8 +7,10 @@ interface DataTableWrapperProps {
 
 export const DataTableWrapper = ({ children }: DataTableWrapperProps) => {
   return (
-    <Card>
-      {children}
+    <Card className="overflow-hidden">
+      <div className="overflow-x-auto">
+        {children}
+      </div>
     </Card>
   );
 };

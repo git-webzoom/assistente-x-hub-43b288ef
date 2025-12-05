@@ -119,14 +119,14 @@ export const ContactFormDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="w-[95vw] max-w-[500px] max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             {contact ? 'Editar Contato' : 'Novo Contato'}
           </DialogTitle>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto pr-4">
+        <div className="flex-1 overflow-y-auto pr-2 md:pr-4">
           <form id="contact-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome *</Label>
@@ -140,7 +140,7 @@ export const ContactFormDialog = ({
               {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -167,7 +167,7 @@ export const ContactFormDialog = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="company">Empresa</Label>
                 <Input
@@ -221,16 +221,17 @@ export const ContactFormDialog = ({
           </form>
         </div>
 
-        <DialogFooter className="flex-shrink-0">
+        <DialogFooter className="flex-shrink-0 flex-col sm:flex-row gap-2">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
+            className="w-full sm:w-auto"
           >
             Cancelar
           </Button>
-          <Button type="submit" form="contact-form" disabled={isSubmitting}>
+          <Button type="submit" form="contact-form" disabled={isSubmitting} className="w-full sm:w-auto">
             {isSubmitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

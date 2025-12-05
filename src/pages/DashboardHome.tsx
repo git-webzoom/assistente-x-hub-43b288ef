@@ -32,25 +32,25 @@ const DashboardHome = () => {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">
+        <h1 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">Dashboard</h1>
+        <p className="text-muted-foreground text-sm md:text-base">
           Bem-vindo de volta! Aqui está um resumo das suas atividades.
         </p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         {statsLoading ? (
           <>
             {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <Skeleton className="w-12 h-12 rounded-lg" />
+              <Card key={i} className="p-4 md:p-6">
+                <div className="flex items-center justify-between mb-3 md:mb-4">
+                  <Skeleton className="w-10 h-10 md:w-12 md:h-12 rounded-lg" />
                 </div>
-                <Skeleton className="h-8 w-20 mb-1" />
-                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-6 md:h-8 w-16 md:w-20 mb-1" />
+                <Skeleton className="h-3 md:h-4 w-24 md:w-32" />
               </Card>
             ))}
           </>
@@ -58,14 +58,14 @@ const DashboardHome = () => {
           statsConfig.map((stat) => {
             const Icon = stat.icon;
             return (
-              <Card key={stat.label} className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
-                    <Icon className="w-6 h-6 text-primary" />
+              <Card key={stat.label} className="p-4 md:p-6">
+                <div className="flex items-center justify-between mb-3 md:mb-4">
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                    <Icon className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                   </div>
                 </div>
-                <div className="text-2xl font-bold mb-1">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
+                <div className="text-xl md:text-2xl font-bold mb-1">{stat.value}</div>
+                <div className="text-xs md:text-sm text-muted-foreground">{stat.label}</div>
               </Card>
             );
           })
@@ -73,10 +73,10 @@ const DashboardHome = () => {
       </div>
 
       {/* Recent Activity */}
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Atividades Recentes</h3>
-          <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <Card className="p-4 md:p-6">
+          <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Atividades Recentes</h3>
+          <div className="space-y-3 md:space-y-4">
             {activitiesLoading ? (
               <>
                 {[1, 2, 3, 4].map((i) => (
@@ -90,16 +90,16 @@ const DashboardHome = () => {
                 ))}
               </>
             ) : activities.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
+              <p className="text-sm text-muted-foreground text-center py-6 md:py-8">
                 Nenhuma atividade recente
               </p>
             ) : (
               activities.map((activity, i) => (
                 <div key={i} className="flex items-start gap-3">
-                  <div className="w-2 h-2 rounded-full bg-accent mt-2" />
-                  <div className="flex-1">
-                    <p className="font-medium">{activity.action}</p>
-                    <p className="text-sm text-muted-foreground">
+                  <div className="w-2 h-2 rounded-full bg-accent mt-2 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm md:text-base truncate">{activity.action}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground">
                       {activity.user} • {activity.time}
                     </p>
                   </div>
@@ -109,14 +109,14 @@ const DashboardHome = () => {
           </div>
         </Card>
 
-        <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Próximos Compromissos</h3>
-          <div className="space-y-4">
+        <Card className="p-4 md:p-6">
+          <h3 className="text-base md:text-lg font-semibold mb-3 md:mb-4">Próximos Compromissos</h3>
+          <div className="space-y-3 md:space-y-4">
             {statsLoading ? (
               <>
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gradient-card">
-                    <Skeleton className="w-10 h-10 rounded-full flex-shrink-0" />
+                  <div key={i} className="flex items-start gap-3 p-2 md:p-3 rounded-lg bg-gradient-card">
+                    <Skeleton className="w-8 h-8 md:w-10 md:h-10 rounded-full flex-shrink-0" />
                     <div className="flex-1 space-y-2">
                       <Skeleton className="h-4 w-full" />
                       <Skeleton className="h-3 w-2/3" />
@@ -126,18 +126,18 @@ const DashboardHome = () => {
                 ))}
               </>
             ) : !stats?.appointments || stats.appointments.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
+              <p className="text-sm text-muted-foreground text-center py-6 md:py-8">
                 Nenhum compromisso agendado
               </p>
             ) : (
               stats.appointments.map((appointment: any, i: number) => (
-                <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-gradient-card">
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Calendar className="w-5 h-5 text-primary" />
+                <div key={i} className="flex items-start gap-3 p-2 md:p-3 rounded-lg bg-gradient-card">
+                  <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Calendar className="w-4 h-4 md:w-5 md:h-5 text-primary" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{appointment.title}</p>
-                    <p className="text-sm text-muted-foreground">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm md:text-base truncate">{appointment.title}</p>
+                    <p className="text-xs md:text-sm text-muted-foreground truncate">
                       {appointment.contact?.name || 'Sem contato'}
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">

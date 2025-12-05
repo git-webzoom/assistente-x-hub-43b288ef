@@ -185,14 +185,14 @@ export default function Tasks() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Tarefas</h1>
-          <p className="text-muted-foreground mt-1">Gerencie suas tarefas e atividades</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Tarefas</h1>
+          <p className="text-muted-foreground mt-1 text-sm md:text-base">Gerencie suas tarefas e atividades</p>
         </div>
         {hasPermission('tasks', 'create') && (
-          <Button onClick={() => handleOpenDialog()}>
+          <Button onClick={() => handleOpenDialog()} className="w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Nova Tarefa
           </Button>
@@ -205,7 +205,7 @@ export default function Tasks() {
         placeholder="Buscar por título, descrição ou contato..."
         filter={
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -218,9 +218,9 @@ export default function Tasks() {
         }
       />
 
-      <div className="grid gap-4">
+      <div className="grid gap-3 md:gap-4">
         {isLoading ? (
-          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-24 w-full" />)
+          Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 md:h-24 w-full" />)
         ) : paginatedItems && paginatedItems.length > 0 ? (
           paginatedItems.map((task) => {
             const priorityBadge = getPriorityBadge(task.priority);
@@ -230,33 +230,33 @@ export default function Tasks() {
             return (
               <Card
                 key={task.id}
-                className={`p-4 ${isCompleted ? 'opacity-60' : ''}`}
+                className={`p-3 md:p-4 ${isCompleted ? 'opacity-60' : ''}`}
               >
-                <div className="flex items-start gap-4">
+                <div className="flex items-start gap-3 md:gap-4">
                   <Checkbox
                     checked={isCompleted}
                     onCheckedChange={() => handleToggleComplete(task)}
                     className="mt-1"
                   />
 
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h3
-                        className={`font-semibold ${
+                        className={`font-semibold text-sm md:text-base ${
                           isCompleted ? 'line-through text-muted-foreground' : ''
                         }`}
                       >
                         {task.title}
                       </h3>
-                      <Badge variant={priorityBadge.variant}>{priorityBadge.label}</Badge>
-                      <Badge variant={statusBadge.variant}>{statusBadge.label}</Badge>
+                      <Badge variant={priorityBadge.variant} className="text-xs">{priorityBadge.label}</Badge>
+                      <Badge variant={statusBadge.variant} className="text-xs">{statusBadge.label}</Badge>
                     </div>
 
                     {task.description && (
-                      <p className="text-sm text-muted-foreground">{task.description}</p>
+                      <p className="text-xs md:text-sm text-muted-foreground line-clamp-2">{task.description}</p>
                     )}
 
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4 text-xs md:text-sm text-muted-foreground">
                       {task.due_date && (
                         <span>
                           Vencimento:{' '}
@@ -264,19 +264,19 @@ export default function Tasks() {
                         </span>
                       )}
                       {task.contact && (
-                        <span className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                            <span className="text-xs font-medium text-primary">
+                        <span className="flex items-center gap-1 md:gap-2">
+                          <div className="w-5 h-5 md:w-6 md:h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                            <span className="text-[10px] md:text-xs font-medium text-primary">
                               {task.contact.name.charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          {task.contact.name}
+                          <span className="truncate max-w-[80px] md:max-w-none">{task.contact.name}</span>
                         </span>
                       )}
                       {task.assigned_user && (
-                        <span className="flex items-center gap-2">
+                        <span className="flex items-center gap-1 md:gap-2">
                           👤
-                          <span className="font-medium text-foreground">
+                          <span className="font-medium text-foreground truncate max-w-[80px] md:max-w-none">
                             {task.assigned_user.name || task.assigned_user.email}
                           </span>
                         </span>
@@ -284,14 +284,14 @@ export default function Tasks() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1 flex-shrink-0">
                     {hasPermission('tasks', 'edit') && (
-                      <Button variant="ghost" size="icon" onClick={() => handleOpenDialog(task)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenDialog(task)}>
                         <Pencil className="w-4 h-4" />
                       </Button>
                     )}
                     {hasPermission('tasks', 'delete') && (
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(task.id)}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(task.id)}>
                         <Trash2 className="w-4 h-4 text-destructive" />
                       </Button>
                     )}
@@ -301,10 +301,10 @@ export default function Tasks() {
             );
           })
         ) : (
-          <Card className="p-12">
+          <Card className="p-8 md:p-12">
             <div className="flex flex-col items-center gap-2 text-center">
-              <CheckSquare className="w-12 h-12 text-muted-foreground/50" />
-              <p className="text-muted-foreground">
+              <CheckSquare className="w-10 h-10 md:w-12 md:h-12 text-muted-foreground/50" />
+              <p className="text-muted-foreground text-sm md:text-base">
                 {searchQuery || filterStatus !== 'all'
                   ? 'Nenhuma tarefa encontrada'
                   : 'Nenhuma tarefa criada ainda'}
@@ -326,7 +326,7 @@ export default function Tasks() {
       )}
 
       <Dialog open={isDialogOpen} onOpenChange={handleCloseDialog}>
-        <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>{editingTask ? 'Editar Tarefa' : 'Nova Tarefa'}</DialogTitle>
             <DialogDescription>
@@ -336,7 +336,7 @@ export default function Tasks() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto pr-4">
+          <div className="flex-1 overflow-y-auto pr-2 md:pr-4">
             <form id="task-form" onSubmit={handleSubmit} className="space-y-4 pb-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Título *</Label>
@@ -358,7 +358,7 @@ export default function Tasks() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="due_date">Data de Vencimento</Label>
                   <Input
@@ -433,11 +433,11 @@ export default function Tasks() {
             </form>
           </div>
 
-          <DialogFooter className="flex-shrink-0">
-            <Button type="button" variant="outline" onClick={handleCloseDialog}>
+          <DialogFooter className="flex-shrink-0 flex-col sm:flex-row gap-2">
+            <Button type="button" variant="outline" onClick={handleCloseDialog} className="w-full sm:w-auto">
               Cancelar
             </Button>
-            <Button type="submit" form="task-form">
+            <Button type="submit" form="task-form" className="w-full sm:w-auto">
               {editingTask ? 'Salvar Alterações' : 'Criar Tarefa'}
             </Button>
           </DialogFooter>
@@ -445,18 +445,18 @@ export default function Tasks() {
       </Dialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[95vw] sm:max-w-lg">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setTaskToDelete(null)}>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel onClick={() => setTaskToDelete(null)} className="w-full sm:w-auto">
               Cancelar
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive">
+            <AlertDialogAction onClick={confirmDelete} className="w-full sm:w-auto bg-destructive">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>

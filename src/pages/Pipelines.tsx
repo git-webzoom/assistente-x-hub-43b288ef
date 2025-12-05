@@ -177,7 +177,7 @@ const StageColumn = ({
   };
 
   return (
-    <div ref={setNodeRef} style={style} className="flex-shrink-0 w-80">
+    <div ref={setNodeRef} style={style} className="flex-shrink-0 w-[280px] md:w-80 snap-start">
       <Card className="bg-muted/50">
         <div className="p-4 border-b">
           <div className="flex items-center justify-between mb-2">
@@ -487,22 +487,22 @@ const Pipelines = () => {
   const selectedPipeline = pipelines?.find((p) => p.id === selectedPipelineId);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <div className="space-y-4">
         <div>
-          <h1 className="text-3xl font-bold mb-2">
+          <h1 className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">
             {selectedPipeline ? `Funil - ${selectedPipeline.name}` : "Funis de Vendas"}
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm md:text-base">
             Gerencie suas oportunidades através de pipelines
           </p>
         </div>
         
-        <div className="flex items-center justify-end gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 md:gap-3">
           {pipelines && pipelines.length > 0 && (
             <>
               <Select value={selectedPipelineId} onValueChange={setSelectedPipelineId}>
-                <SelectTrigger className="w-[280px]">
+                <SelectTrigger className="w-full sm:w-[200px] md:w-[280px]">
                   <SelectValue placeholder="Selecione uma pipeline" />
                 </SelectTrigger>
                 <SelectContent>
@@ -514,7 +514,7 @@ const Pipelines = () => {
                 </SelectContent>
               </Select>
               {isSupervisor && (
-                <div className="w-[240px]">
+                <div className="w-full sm:w-[200px] md:w-[240px]">
                   <UserSelect 
                     value={ownerFilter}
                     onChange={setOwnerFilter}
@@ -522,16 +522,26 @@ const Pipelines = () => {
                   />
                 </div>
               )}
-              {hasPermission('pipelines', 'create') && (
-                <Button variant="outline" onClick={() => setStageDialogOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Nova Etapa
-                </Button>
-              )}
+              <div className="flex gap-2 sm:ml-auto">
+                {hasPermission('pipelines', 'create') && (
+                  <Button variant="outline" onClick={() => setStageDialogOpen(true)} className="flex-1 sm:flex-none">
+                    <Plus className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Nova Etapa</span>
+                    <span className="sm:hidden">Etapa</span>
+                  </Button>
+                )}
+                {hasPermission('pipelines', 'create') && (
+                  <Button variant="default" onClick={() => setPipelineDialogOpen(true)} className="flex-1 sm:flex-none">
+                    <Plus className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">Nova Pipeline</span>
+                    <span className="sm:hidden">Pipeline</span>
+                  </Button>
+                )}
+              </div>
             </>
           )}
-          {hasPermission('pipelines', 'create') && (
-            <Button variant="default" onClick={() => setPipelineDialogOpen(true)}>
+          {(!pipelines || pipelines.length === 0) && hasPermission('pipelines', 'create') && (
+            <Button variant="default" onClick={() => setPipelineDialogOpen(true)} className="w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               Nova Pipeline
             </Button>
@@ -540,12 +550,12 @@ const Pipelines = () => {
       </div>
       {pipelines && pipelines.length > 0 ? (
         <>
-          <DndContext
+            <DndContext
             sensors={sensors}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
-            <div className="flex gap-4 overflow-x-auto pb-4">
+            <div className="flex gap-3 md:gap-4 overflow-x-auto pb-4 -mx-3 px-3 md:mx-0 md:px-0 snap-x snap-mandatory md:snap-none">
               {stagesLoading ? (
                 <>
                   <Skeleton className="flex-shrink-0 w-80 h-96" />
