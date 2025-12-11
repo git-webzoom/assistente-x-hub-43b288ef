@@ -24,16 +24,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -47,6 +37,7 @@ import { CustomFieldsSection } from '@/components/CustomFieldsSection';
 import { ContactSelect } from '@/components/ContactSelect';
 import { UserSelect } from '@/components/UserSelect';
 import { useUserEntityPermissions } from '@/hooks/useUserEntityPermissions';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 
 export default function Calendar() {
   const { hasPermission } = useUserEntityPermissions();
@@ -632,24 +623,12 @@ export default function Calendar() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="max-w-[95vw] sm:max-w-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir este compromisso? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel onClick={() => setAppointmentToDelete(null)} className="w-full sm:w-auto">
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="w-full sm:w-auto bg-destructive">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        description="Tem certeza que deseja excluir este compromisso? Esta ação não pode ser desfeita."
+      />
     </div>
   );
 }
