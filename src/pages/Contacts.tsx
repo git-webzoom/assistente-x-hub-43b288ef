@@ -10,16 +10,6 @@ import {
 } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -33,6 +23,9 @@ import { DataTableWrapper } from '@/components/DataTableWrapper';
 import { useUserEntityPermissions } from '@/hooks/useUserEntityPermissions';
 import { usePagination } from '@/hooks/usePagination';
 import { DataPagination } from '@/components/DataPagination';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { PageHeader } from '@/components/PageHeader';
+import { EmptyState } from '@/components/EmptyState';
 
 const Contacts = () => {
   const { hasPermission } = useUserEntityPermissions();
@@ -89,20 +82,18 @@ const Contacts = () => {
 
   return (
     <div className="space-y-4 md:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">Contatos</h1>
-          <p className="text-muted-foreground mt-1 text-sm md:text-base">
-            Gerencie seus contatos e relacionamentos
-          </p>
-        </div>
-        {hasPermission('contacts', 'create') && (
-          <Button onClick={handleNewContact} className="w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Contato
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="Contatos"
+        description="Gerencie seus contatos e relacionamentos"
+        action={
+          hasPermission('contacts', 'create') && (
+            <Button onClick={handleNewContact} className="w-full sm:w-auto">
+              <Plus className="w-4 h-4 mr-2" />
+              Novo Contato
+            </Button>
+          )
+        }
+      />
 
       <SearchInput
         value={searchQuery}
@@ -136,25 +127,23 @@ const Contacts = () => {
           </Table>
         </DataTableWrapper>
       ) : contacts.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12 md:py-16 text-center px-4">
-          <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-            <Users className="w-7 h-7 md:w-8 md:h-8 text-primary" />
-          </div>
-          <h3 className="text-lg md:text-xl font-semibold mb-2">
-            {searchQuery ? 'Nenhum contato encontrado' : 'Nenhum contato cadastrado'}
-          </h3>
-          <p className="text-muted-foreground mb-6 max-w-md text-sm md:text-base">
-            {searchQuery
+        <EmptyState
+          icon={Users}
+          title={searchQuery ? 'Nenhum contato encontrado' : 'Nenhum contato cadastrado'}
+          description={
+            searchQuery
               ? 'Tente ajustar sua busca ou limpar os filtros'
-              : 'Comece adicionando seu primeiro contato para gerenciar seus relacionamentos'}
-          </p>
-          {!searchQuery && hasPermission('contacts', 'create') && (
-            <Button onClick={handleNewContact}>
-              <Plus className="mr-2 h-4 w-4" />
-              Adicionar Primeiro Contato
-            </Button>
-          )}
-        </div>
+              : 'Comece adicionando seu primeiro contato para gerenciar seus relacionamentos'
+          }
+          action={
+            !searchQuery && hasPermission('contacts', 'create') && (
+              <Button onClick={handleNewContact}>
+                <Plus className="mr-2 h-4 w-4" />
+                Adicionar Primeiro Contato
+              </Button>
+            )
+          }
+        />
       ) : (
         <>
           <DataTableWrapper>
@@ -236,26 +225,13 @@ const Contacts = () => {
       />
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!contactToDelete} onOpenChange={() => setContactToDelete(null)}>
-        <AlertDialogContent className="max-w-[95vw] sm:max-w-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o contato "{contactToDelete?.name}"? 
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel className="w-full sm:w-auto">Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={confirmDelete}
-              className="w-full sm:w-auto bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={!!contactToDelete}
+        onOpenChange={() => setContactToDelete(null)}
+        onConfirm={confirmDelete}
+        description={`Tem certeza que deseja excluir o contato "${contactToDelete?.name}"? Esta ação não pode ser desfeita.`}
+        isLoading={deleteContact.isPending}
+      />
     </div>
   );
 };

@@ -22,16 +22,6 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { useProducts, type Product } from '@/hooks/useProducts';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CustomFieldsSection } from '@/components/CustomFieldsSection';
@@ -47,6 +37,9 @@ import { useProductCategories } from '@/hooks/useProductCategories';
 import { useUserEntityPermissions } from '@/hooks/useUserEntityPermissions';
 import { usePagination } from '@/hooks/usePagination';
 import { DataPagination } from '@/components/DataPagination';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
+import { PageHeader } from '@/components/PageHeader';
+import { EmptyState } from '@/components/EmptyState';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
@@ -611,24 +604,12 @@ export default function Products() {
       </DialogContent>
     </Dialog>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setProductToDelete(null)}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        description="Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita."
+      />
     </div>
   );
 }

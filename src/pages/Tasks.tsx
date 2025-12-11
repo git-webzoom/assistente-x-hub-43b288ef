@@ -24,16 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { useTasks, type Task } from '@/hooks/useTasks';
 import { useContacts } from '@/hooks/useContacts';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -45,6 +35,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { useUserEntityPermissions } from '@/hooks/useUserEntityPermissions';
 import { usePagination } from '@/hooks/usePagination';
 import { DataPagination } from '@/components/DataPagination';
+import { ConfirmDeleteDialog } from '@/components/ConfirmDeleteDialog';
 
 export default function Tasks() {
   const { hasPermission } = useUserEntityPermissions();
@@ -444,24 +435,12 @@ export default function Tasks() {
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="max-w-[95vw] sm:max-w-lg">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel onClick={() => setTaskToDelete(null)} className="w-full sm:w-auto">
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="w-full sm:w-auto bg-destructive">
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmDeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={confirmDelete}
+        description="Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita."
+      />
     </div>
   );
 }
